@@ -1,6 +1,7 @@
 fn parse(input: &str) -> Vec<usize> {
     let mut elves = Vec::new();
     let mut elf = Vec::new();
+    
     for line in input.lines() {
         if line.len() == 0 {
             elves.push(elf.iter().sum::<usize>());
