@@ -1,5 +1,4 @@
 // instructions are (amount, from, to)
-
 fn parse(input: &str) -> Vec<(usize, usize, usize)> {
     let mut instructions = Vec::new();
 
@@ -10,18 +9,21 @@ fn parse(input: &str) -> Vec<(usize, usize, usize)> {
 
     instructions
 }
-fn create_start_config() -> Vec<Vec<char>>{
-    vec![
-        vec!['Z', 'T', 'F', 'R', 'W', 'J', 'G'],
-        vec!['G', 'W', 'M'],
-        vec!['J', 'N', 'H', 'G'],
-        vec!['J', 'R', 'C', 'N', 'W'],
-        vec!['W', 'F', 'S', 'B', 'G', 'Q', 'V', 'M'],
-        vec!['S', 'R', 'T', 'D', 'V', 'W', 'C'],
-        vec!['H', 'B', 'N', 'C', 'D', 'Z', 'G', 'V'],
-        vec!['S', 'J', 'N', 'M', 'G', 'C'],
-        vec!['G', 'P', 'N', 'W', 'C', 'J', 'D', 'L'],
-    ]
+
+fn parse_stacks(input: &str) -> Vec<Vec<char>> {
+    let mut stacks = Vec::new();
+    for line in input.lines().filter(|l| !l.starts_with("move") && !l.is_empty()).rev() {
+        for (i, ch) in line.chars().skip(1).step_by(4).enumerate() {
+            if stacks.len() == i {
+                stacks.push(Vec::new());
+            }
+            if ch.is_alphabetic() {
+                stacks[i].push(ch)
+            }
+        }
+    }
+
+    stacks
 }
 
 fn execute_instruction_9000((amount, from, to): (usize, usize, usize), crates: &mut Vec<Vec<char>>) {
@@ -55,8 +57,9 @@ fn get_top_crates(crates: Vec<Vec<char>>) -> String {
 }
 
 pub fn get_solution_1() -> String {
-    let instructions = parse(include_str!("../data/d05.txt"));
-    let mut crates = create_start_config();
+    let input = include_str!("../data/d05.txt");
+    let instructions = parse(input);
+    let mut crates = parse_stacks(input);
     for instruction in instructions {
         execute_instruction_9000(instruction, &mut crates);
     }
@@ -65,8 +68,9 @@ pub fn get_solution_1() -> String {
 }
 
 pub fn get_solution_2() -> String {
-    let instructions = parse(include_str!("../data/d05.txt"));
-    let mut crates = create_start_config();
+    let input = include_str!("../data/d05.txt");
+    let instructions = parse(input);
+    let mut crates = parse_stacks(input);
     for instruction in instructions {
         execute_instruction_9001(instruction, &mut crates);
     }
