@@ -1,4 +1,4 @@
-use std::fmt::{ Display, Write };
+use std::{fmt::{ Display, Write }, collections::HashMap, path::PathBuf};
 
 fn parse(input: &'static str) -> Dir {
     add_dir(&input.lines().map(|line| line.split_whitespace().collect::<Vec<&str>>()).collect::<Vec<Vec<&str>>>(), &mut 0)
@@ -126,4 +126,75 @@ pub fn get_solution_2() -> usize {
     let required_space = 30000000 - (70000000 - actual_size);
 
     sizes.into_iter().filter(|s| *s >= required_space).min().unwrap()
+}
+
+// implement it via hashmap
+type _FileSystem = HashMap<PathBuf, (Vec<usize>, Vec<PathBuf>)>;
+
+fn _parse_hash_map(input: &'static str) -> _FileSystem {
+    let mut fs = HashMap::new();
+    let mut path = PathBuf::new();
+    for parts in input.lines().map(|l| l.split_whitespace().collect::<Vec<&str>>()) {
+        match parts[..] {
+            ["$", "cd", "..", ..] => { path.pop(); },
+            ["$", "cd", dir, ..] => path.push(dir),
+            ["$", "ls", ..] => continue,
+            [..] => { 
+                match parts[..] {
+                    ["dir", dir_name, ..] => {
+                        let mut new_dir = path.clone();
+                        new_dir.push(dir_name);
+                        let (_, sub_dirs) = fs.entry(path.clone()).or_insert((Vec::new(), Vec::new()));
+                        sub_dirs.push(new_dir)
+                    }
+                    [size, ..] => {
+                        let (files, _) = fs.entry(path.clone()).or_insert((Vec::new(), Vec::new()));
+                        files.push(size.parse().unwrap())
+                    },
+                    [..] => continue,
+                }
+            },
+        }
+    }
+
+    fs
+}
+
+fn _get_sizes<'file>(fs: &'file _FileSystem) -> HashMap<&'file PathBuf, usize> {
+    let mut sizes = HashMap::new();
+    for k in fs.keys() {
+        if !sizes.contains_key(k) {
+            let size = _calculate_size(fs, k, &mut sizes);
+            sizes.insert(k, size);
+        }
+    }
+    sizes
+}
+
+fn _calculate_size<'file>(fs: &'file _FileSystem, k: &PathBuf, sizes: &mut HashMap<&'file PathBuf, usize>) -> usize {
+    let (files, children) = fs.get(k).unwrap();
+    let mut size = files.iter().sum();
+
+    for child in children {
+        if sizes.contains_key(child) {
+            size += sizes.get(child).unwrap();
+        } else {
+            size += _calculate_size(fs, child, sizes);
+        }
+    }
+
+    size
+}
+
+fn _get_solution_map_1() -> usize {
+    let fs = _parse_hash_map(include_str!("../data/d07.txt"));
+    _get_sizes(&fs).values().filter(|v| **v <= 100000).sum()
+}
+
+pub fn _get_solution_map_2() -> usize {
+    let fs = _parse_hash_map(include_str!("../data/d07.txt"));
+    let sizes = _get_sizes(&fs);
+    let max = sizes.get(&PathBuf::from("/")).unwrap();
+    let required_space = 30000000 - (70000000 - max);
+    *sizes.values().filter(|v| **v >= required_space).min().unwrap()
 }
