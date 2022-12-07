@@ -6,6 +6,7 @@ mod d03;
 mod d04;
 mod d05;
 mod d06;
+mod d07;
 
 fn main() {
     println!("Day\t\truntime\tresult");
