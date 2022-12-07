@@ -60,5 +60,13 @@ fn main() {
     let result = d06::get_solution_2();
     println!("Day  6.2\t{}us\t{}", start.elapsed().as_micros(), result);
 
+    let start = Instant::now();
+    let result = d07::get_solution_1();
+    println!("Day  7.1\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
+    let result = d07::get_solution_2();
+    println!("Day  7.2\t{}us\t{}", start.elapsed().as_micros(), result);
+
     println!("\nTotal runtime: {}ms", start_all.elapsed().as_millis());
 }

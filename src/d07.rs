@@ -1,77 +1,95 @@
-use std::collections::HashMap;
+fn parse(input: &'static str) -> Dir {
+    add_dir(&input.lines().map(|line| line.split_whitespace().collect::<Vec<&str>>()).collect::<Vec<Vec<&str>>>(), &mut 0)
+}
 
-type Dirs = HashMap<&'static str, (Vec<(&'static str, usize)>, Vec<&'static str>)>; // (files, other dirs)
+fn add_dir(inputs: &Vec<Vec<&'static str>>, cursor: &mut usize) -> Dir {
+    let cd_cmd = &inputs[*cursor];
+    assert_ne!(cd_cmd[2], "..");
+    let mut dir = Dir::new(cd_cmd[2]);
+    *cursor += 1;
 
-fn parse(input: &'static str) -> Dirs {
-    let mut path = Vec::new();
-    let mut dirs = HashMap::from([("/", (Vec::new(), Vec::new()))]);
-    for instr in input.lines() {
-        let parts = instr.split_whitespace().collect::<Vec<&str>>();
-        match (parts[0], parts[1]) {
-            ("$", "cd") => match parts[2] {
-                ".." => { path.pop(); },
-                dir => path.push(dir),
-            },
-            ("$", "ls") => continue,
-            ("dir", new_dir) => {
-                let cur_dir = path.last().unwrap();
-                if !dirs.contains_key(new_dir) {
-                    dirs.insert(new_dir, (Vec::new(), Vec::new()));
-                    assert!(dirs.contains_key(cur_dir));
-                    let (_, other_dirs) = dirs.get_mut(cur_dir).unwrap();
-                    other_dirs.push(new_dir);
-                };
-            },
-            (f_size, f_name) => {
-                let cur_dir = path.last().unwrap();
-                let size = f_size.parse().unwrap();
-                assert!(dirs.contains_key(cur_dir));
-                let (files, _) = dirs.get_mut(cur_dir).unwrap();
-                files.push((f_name, size))
-            },
+    assert_eq!(inputs[*cursor][1], "ls");
+    *cursor += 1;
+
+    add_files(inputs, &mut dir, cursor);
+    if *cursor >= inputs.len() {
+        return dir;
+    }
+    while let Some(cmd) = inputs.get(*cursor) {
+        if cmd[2] == ".." {
+            break;
+        }
+        dir.add_dir(add_dir(inputs, cursor));
+        *cursor += 1;
+    } 
+
+    dir
+}
+
+fn add_files(inputs: &Vec<Vec<&str>>, dir: &mut Dir, cursor: &mut usize) {
+    while inputs[*cursor][0] != "$" {
+        match inputs[*cursor][0] {
+            "dir" => (),
+            n => dir.add_file(n.parse().unwrap()),
+        }
+        *cursor += 1;
+        if *cursor >= inputs.len() {
+            break;
         }
     }
-
-    dirs
 }
 
-fn calculate_sizes(dirs: &Dirs) -> HashMap<&'static str, usize> {
-    let mut dir_sizes = HashMap::new();
-    for (cur_dir, _) in dirs {
-        if !dir_sizes.contains_key(cur_dir) {
-            let size = calculate_size(cur_dir, dirs);
-            dir_sizes.insert(*cur_dir, size);
+#[derive(Debug)]
+struct Dir {
+    _name: &'static str,
+    dirs: Vec<Box<Dir>>,
+    files: Vec<usize>,
+}
+
+impl Dir {
+    fn new(name: &'static str) -> Self {
+        Self { _name: name, dirs: Vec::new(), files: Vec::new() }
+    }
+
+    fn add_dir(&mut self, dir: Dir) {
+        self.dirs.push(Box::new(dir));
+    }
+
+    fn add_file(&mut self, file: usize) {
+        self.files.push(file);
+    }
+
+    fn get_size(&self) -> usize {
+        let mut size = self.files.iter().sum();
+        for dir in &self.dirs {
+            size += dir.get_size();
         }
+        size
+    } 
+
+    fn record_all_sizes(&self, sizes: &mut Vec<usize>) {
+        let mut size = self.files.iter().sum();
+        for dir in &self.dirs {
+            size += dir.get_size();
+            dir.record_all_sizes(sizes);
+        }
+
+        sizes.push(size);
     }
-
-    dir_sizes
 }
 
-fn calculate_size(dir_name: &'static str, dirs: &Dirs) -> usize {
-    let (files, children) = dirs.get(dir_name).unwrap();
-    let mut size = files.iter().map(|(_, size)| size).sum();
-    for child in children {
-        size += calculate_size(child, dirs);
-    }
-
-    size
+pub fn get_solution_1() -> usize {
+    let fs = parse(include_str!("../data/d07.txt"));
+    let mut sizes = Vec::new();
+    fs.record_all_sizes(&mut sizes);
+    sizes.into_iter().filter(|s| *s <= 100000).sum()
 }
 
-fn get_less_than_100000(sizes: HashMap<&'static str, usize>) -> usize {
-    sizes.into_iter().map(|(_, size)| size).filter(|s| s <= &100000).sum()
-}
-
-#[test]
-fn test_parse() {
-    let input = include_str!("../data/d07.txt");
-    let dirs = parse(input);
-    println!("{:?}", dirs);
-}
-
-#[test]
-fn test() {
-    let input = include_str!("../data/d07.txt");
-    let dirs = parse(input);
-    let sizes = calculate_sizes(&dirs); 
-    println!("{}", get_less_than_100000(sizes));
+pub fn get_solution_2() -> usize {
+    let fs = parse(include_str!("../data/d07.txt"));
+    let mut sizes = Vec::new();
+    fs.record_all_sizes(&mut sizes);
+    let actual_size = *sizes.iter().max().unwrap();
+    let required_space = 30000000 - (70000000 - actual_size);
+    sizes.into_iter().filter(|s| *s >= required_space).min().unwrap()
 }
