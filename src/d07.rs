@@ -191,7 +191,7 @@ fn _get_solution_map_1() -> usize {
     _get_sizes(&fs).values().filter(|v| **v <= 100000).sum()
 }
 
-pub fn _get_solution_map_2() -> usize {
+fn _get_solution_map_2() -> usize {
     let fs = _parse_hash_map(include_str!("../data/d07.txt"));
     let sizes = _get_sizes(&fs);
     let max = sizes.get(&PathBuf::from("/")).unwrap();
