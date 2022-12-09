@@ -1,13 +1,13 @@
 use std::collections::{HashSet, HashMap};
 
-trait Rope {
+trait Knot {
     fn add(&mut self, other: &Self);
     fn diff(&self, other: &Self) -> Self;
     fn ident(&self) -> Self;
     fn moves(&self) -> bool;
 }
 
-impl Rope for (isize, isize) {
+impl Knot for (isize, isize) {
     fn add(&mut self, other: &Self) {
         self.0 += other.0;
         self.1 += other.1;
@@ -18,15 +18,14 @@ impl Rope for (isize, isize) {
     }
 
     fn ident(&self) -> Self {
-        (if self.0 != 0 { self.0 / self.0.abs() } else { 0 }, 
-         if self.1 != 0 { self.1 / self.1.abs() } else { 0 })
+        (self.0.signum(), self.1.signum())
     }
 
     fn moves(&self) -> bool {
-        !(self.0 > - 2 && self.0 < 2 && self.1 > -2 && self.1 < 2)    }
+        !(self.0.abs() < 2  && self.1.abs() < 2)
+    }
 }
 
-// head/tail = (x, y)
 fn parse(input: &str) -> Vec<((isize, isize), usize)> {
     let dirs = HashMap::from([("U", (0, 1)), ("D", (0, -1)), ("R", (1, 0)), ("L", (-1, 0))]);
     
@@ -62,5 +61,4 @@ pub fn get_solution_1() -> usize {
 
 pub fn get_solution_2() -> usize {
     execute_steps::<10>(parse(include_str!("../data/d09.txt")))
-    
 }
