@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+mod helpers;
 mod d01;
 mod d02;
 mod d03;

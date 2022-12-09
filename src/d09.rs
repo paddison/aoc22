@@ -1,4 +1,5 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashMap;
+use crate::helpers::BitMap;
 
 trait Knot {
     fn add(&mut self, other: &Self);
@@ -36,8 +37,8 @@ fn parse(input: &str) -> Vec<((isize, isize), usize)> {
 }
 
 fn execute_steps<const N: usize>(steps: Vec<((isize, isize), usize)>) -> usize {
-    let mut visited = HashSet::<(isize, isize)>::new();
-    let mut knots = [(0, 0); N];
+    let mut visited = [0; 8192];
+    let mut knots = [(512, 512); N];
 
     for (dir, n_steps) in steps {
         for _ in 0..n_steps {
@@ -48,11 +49,12 @@ fn execute_steps<const N: usize>(steps: Vec<((isize, isize), usize)>) -> usize {
                     knots[i].add(&diff.ident());
                 }
             }
-            visited.insert(knots[N - 1].clone());
+            visited.set_bit(knots[N - 1].1 as usize, knots[N - 1].0 as usize);
         }
     } 
 
-    visited.len()
+    visited.count_bits()
+    
 }
 
 pub fn get_solution_1() -> usize {
