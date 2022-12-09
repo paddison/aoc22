@@ -8,6 +8,7 @@ mod d05;
 mod d06;
 mod d07;
 mod d08;
+mod d09;
 
 fn main() {
     println!("Day\t\truntime\tresult");
@@ -76,6 +77,14 @@ fn main() {
     let start = Instant::now();
     let result = d08::get_solution_2();
     println!("Day  8.2\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
+    let result = d09::get_solution_1();
+    println!("Day  9.1\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
+    let result = d09::get_solution_2();
+    println!("Day  9.2\t{}us\t{}", start.elapsed().as_micros(), result);
 
     println!("\nTotal runtime: {}ms", start_all.elapsed().as_millis());
 }
