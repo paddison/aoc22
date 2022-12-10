@@ -11,19 +11,19 @@ fn parse(input: &str) -> Vec<(usize, i64)> {
 }
 
 fn execute_instr(instructions: Vec<(usize, i64)>) -> i64 {
-    let (mut x, mut i_count, mut signal_strengths) = (1, 0, Vec::new());
+    let (mut x, mut i_count, mut signal_strengths) = (1, 0, 0);
 
     for (cycles, n) in instructions {
         for _ in 0..cycles {
             i_count += 1;
             if (i_count + 20) % 40 == 0 {
-                signal_strengths.push(i_count * x);
+                signal_strengths += i_count * x;
             }
         }
         x += n;
     }
 
-    signal_strengths.into_iter().sum()
+    signal_strengths
 }
 
 fn draw_screen(instructions: Vec<(usize, i64)>) -> [bool; 240] {
