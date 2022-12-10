@@ -54,7 +54,6 @@ fn execute_steps<const N: usize>(steps: Vec<((isize, isize), usize)>) -> usize {
     } 
 
     visited.count_bits()
-    
 }
 
 pub fn get_solution_1() -> usize {
