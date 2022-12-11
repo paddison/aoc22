@@ -26,12 +26,14 @@ fn execute_instr(instructions: Vec<(usize, i64)>) -> i64 {
     signal_strengths
 }
 
-fn draw_screen(instructions: Vec<(usize, i64)>) -> [bool; 240] {
-    let (mut x, mut i_count, mut screen) = (1, 0, [false; 240]);
+fn draw_screen(instructions: Vec<(usize, i64)>) -> [char; 240] {
+    let (mut x, mut i_count, mut screen) = (1, 0, ['.'; 240]);
 
     for (cycles, n) in instructions {
         for _ in 0..cycles {
-            screen[i_count] = (x as usize).abs_diff(i_count % 40) <= 1;
+            if (x as usize).abs_diff(i_count % 40) <= 1 {
+                screen[i_count] = '#';
+            }
             i_count += 1;
         }
         x += n;
@@ -40,12 +42,10 @@ fn draw_screen(instructions: Vec<(usize, i64)>) -> [bool; 240] {
     screen
 }
 
-fn to_string(screen: &[bool; 240]) -> String {
+fn to_string(screen: &[char; 240]) -> String {
     let mut string = String::new();
     for line in screen.chunks(40) {
-        let _ = writeln!(string, "{}", line.iter()
-                                           .map(|pixel| if *pixel { '#' } else { ',' } )
-                                           .collect::<String>());
+        let _ = writeln!(string, "{}", line.iter().collect::<String>());
     }
     string
 }
