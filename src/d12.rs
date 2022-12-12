@@ -1,4 +1,4 @@
-use std::{collections::BinaryHeap, fmt::Display};
+use std::{collections::BinaryHeap, fmt::Display, sync::Arc};
 
 static INPUT: &str = include_str!("../data/d12.txt");
 static _TEST: &str = include_str!("../data/d12_test.txt");
@@ -14,7 +14,12 @@ struct Graph {
 impl Display for Graph {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in self.height_map.chunks(self.dim.1) {
-            let _ = writeln!(f, "{}", row.iter().map(|n| if *n != 36 { char::from_digit(*n as u32, 36).unwrap_or('#') } else { '.' }).collect::<String>());
+            let _ = writeln!(f, "{}", row.iter()
+                                         .map(|n| match *n { 
+                                            36 => '.',
+                                            n => char::from_digit(n as u32, 36).unwrap_or('#'),  
+                                         })
+                                         .collect::<String>());
         }
 
         Ok(())
@@ -73,29 +78,23 @@ impl Graph {
 
     fn hike(g: Self) -> usize {
         let n_threads = 4;
-        let starting_positions = g.height_map.iter()
+        let starting_positions = Arc::new(g.height_map.iter()
                                         .enumerate()
-                                        .filter(|(_, n)| **n <= 1)
+                                        .filter(|(_, n)| **n == 0)
                                         .map(|(idx, _)| g.coords(idx))
-                                        .collect::<Vec<(usize, usize)>>();
-        let mut paths = Vec::new(); 
+                                        .collect::<Vec<(usize, usize)>>());
         let chunk_size = starting_positions.len() / n_threads;
+        let mut paths = Vec::new(); 
         let mut handles = Vec::new();
         
         for id in 0..n_threads {
             let g_thread = g.clone();
-
-            let mut slice = Vec::new();
-
-            for pos in &starting_positions[id * chunk_size..id * chunk_size + chunk_size] {
-                slice.push(*pos);
-            }
-
+            let thread_positions = Arc::clone(&starting_positions);
             let handle = std::thread::spawn(move || {
                 let mut paths = Vec::new();
-                for pos in slice {
+                for pos in &thread_positions[id * chunk_size..id * chunk_size + chunk_size] {
                     let mut g_iter = g_thread.clone();
-                    g_iter.start = Node { height: 0, pos, cost: 0 };
+                    g_iter.start = Node { height: 0, pos: *pos, cost: 0 };
                     if let Some(steps) = g_iter.walk() {
                         paths.push(steps)
                     }
@@ -107,15 +106,12 @@ impl Graph {
         }
 
         for handle in handles {
-            let min_cost = *handle.join()
-                                  .unwrap()
-                                  .iter()
-                                  .min()
-                                  .unwrap_or(&usize::MAX);
-            paths.push(min_cost);
+            if let Some(min_cost) = handle.join().unwrap().into_iter().min() {
+                paths.push(min_cost);
+            }
         }
         
-        *paths.iter().min().unwrap()
+        paths.into_iter().min().unwrap()
     }
 }
 
