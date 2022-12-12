@@ -3,7 +3,7 @@ use std::{collections::{HashMap, BinaryHeap}, fmt::Display};
 static INPUT: &str = include_str!("../data/d12.txt");
 static _TEST: &str = include_str!("../data/d12_test.txt");
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Graph {
     start: Node,
     goal: Node,
@@ -23,50 +23,38 @@ impl Display for Graph {
 
 impl Graph {
 
-    fn walk(&self) -> (Vec<(usize, usize)>, usize) {
+    fn walk(&mut self) -> Option<usize> {
         let mut queue = BinaryHeap::new();
         queue.push(self.start);
-        let mut costs = HashMap::from([(self.start.pos, 0_usize)]);
-        let mut path = HashMap::from([(self.start.pos, None)]);
  
         while !queue.is_empty() {
             let cur =  queue.pop().unwrap();
             if cur == self.goal {
-                return (Self::build_path(self.goal.pos, path), *costs.get(&cur.pos).unwrap());
+                return Some(cur.cost);
             }
             for nb in self.get_neighbours(&cur) {
-                if !costs.contains_key(&nb.pos) {
-                    costs.insert(nb.pos, nb.cost);
-                    path.insert(nb.pos, Some(cur.pos));
-                    queue.push(nb);
-                }
+                let idx = self.idx(nb.pos.0, nb.pos.1);
+                self.nodes[idx] = i8::MAX;
+                queue.push(nb);
             }
         }
 
-        (Vec::new(), 0)
+        None
     }
 
-    fn hike(&mut self) -> usize {
-        let starting_positions = self.nodes.iter().enumerate().filter(|(_, n)| **n <= 1).map(|(idx, _)| self.rev_idx(idx)).collect::<Vec<(usize, usize)>>();
-        let mut paths = Vec::new();
+    fn hike(g: Self) -> usize {
+        let starting_positions = g.nodes.iter().enumerate().filter(|(_, n)| **n <= 1).map(|(idx, _)| g.rev_idx(idx)).collect::<Vec<(usize, usize)>>();
+        let mut costs = Vec::new();
         for pos in starting_positions {
+            let mut g_cloned = g.clone();
             let mut new_start = Node { val: 0, pos, dist: 0, cost: 0 };
-            new_start.dist = self.dist(&new_start);
-            self.start = new_start;
-            paths.push(self.walk().1);
+            new_start.dist = g_cloned.dist(&new_start);
+            g_cloned.start = new_start;
+            if let Some(cost) = g_cloned.walk() {
+                costs.push(cost);
+            }
         }
-        *paths.iter().filter(|n| **n != 0).min().unwrap()
-    }
-
-    fn build_path(goal: (usize, usize), path: HashMap::<(usize, usize), Option<(usize, usize)>>) -> Vec<(usize, usize)> {
-        let mut reconstructed_path = vec![goal];
-        let mut cur = goal;
-        while let Some(Some(n)) = path.get(&cur) {
-            reconstructed_path.push(*n);
-            cur = *n;
-        }
-
-        reconstructed_path
+        *costs.iter().filter(|n| **n != 0).min().unwrap()
     }
 
     fn rev_idx(&self, idx: usize) -> (usize, usize) {
@@ -156,31 +144,17 @@ fn parse(input: &str) -> Graph {
 }
 
 pub fn get_solution_1() -> usize {
-    let g = parse(INPUT);
-    g.walk().1 
+    let mut g = parse(INPUT);
+    g.walk().unwrap()
 }
 
 pub fn get_solution_2() -> usize {
-    let mut g = parse(INPUT);
-    g.hike()
+    let g = parse(INPUT);
+    Graph::hike(g)
 }
 
 
 #[test]
 fn test_do_digit() {
     println!("{}", 'z'.to_digit(36).unwrap() - 10);
-}
-
-#[test]
-fn test_walk() {
-    let mut g = parse(INPUT);
-    let (path, c) = g.walk();
-    println!("{}", path.len());
-    for (row, col) in path {
-        let idx = g.idx(row, col);
-        let n = &mut g.nodes[idx];
-        *n = 35;
-    }
-    println!("{}", g);
-    println!("{}", c);
 }
