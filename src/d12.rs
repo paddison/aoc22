@@ -45,24 +45,27 @@ impl Graph {
     fn walk(&mut self) -> Option<usize> {
         let mut queue = BinaryHeap::new();
         queue.push(self.start);
-        let mut paths = HashMap::from([(self.start.pos, None)]);
+        // let mut paths = HashMap::from([(self.start.pos, None)]);
  
         while !queue.is_empty() {
             let cur =  queue.pop().unwrap();
+            let idx = self.idx(cur.pos.0, cur.pos.1);
+            if self.height_map[idx] == i8::MAX {
+                continue;
+            }
+            self.height_map[idx] = i8::MAX;            
             for nb in self.get_neighbours(&cur) {
                 if nb == self.goal {
-                    let mut start = cur.pos;
-                    while let Some(Some((row, col))) = paths.remove(&start) {
-                        let idx = self.idx(row, col);
-                        self.height_map[idx] = 36;
-                        start = (row, col);
-                    }
-                    println!("{}", self);
+                    // let mut start = cur.pos;
+                    // while let Some(Some((row, col))) = paths.remove(&start) {
+                    //     let idx = self.idx(row, col);
+                    //     self.height_map[idx] = 36;
+                    //     start = (row, col);
+                    // }
+                    // println!("{}", self);
                     return Some(nb.cost);
                 }
-                let idx = self.idx(nb.pos.0, nb.pos.1);
-                self.height_map[idx] = i8::MAX;
-                paths.insert(nb.pos, Some(cur.pos));
+                // paths.insert(nb.pos, Some(cur.pos));
                 queue.push(nb);
             }
         }
@@ -77,7 +80,7 @@ impl Graph {
                                         .map(|(idx, _)| g.coords(idx))
                                         .collect::<Vec<(usize, usize)>>();
         let mut paths = Vec::new();
-        let n_threads = 4;
+        let n_threads = 2;
         let chunk_size = starting_positions.len() / n_threads;
         let mut handles = Vec::new();
         
@@ -125,7 +128,7 @@ impl Graph {
         for (r, c) in others_pos {
             if let Some(other) = self.height(r, c) {
                 if other - node.height < 2 {
-                    let n = Node { height: other, pos: (r, c), dist: self.dist(node), cost: node.cost + 1 };
+                    let n = Node { height: other, pos: (r, c), dist: Self::dist_2((r, c), self.goal.pos), cost: node.cost + 1 };
                     nb.push(n);
                 }
             }
@@ -196,5 +199,5 @@ pub fn get_solution_2() -> usize {
 
 #[test]
 fn test() {
-    get_solution_1();
+    println!("{}", get_solution_1());
 }
