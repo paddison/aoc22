@@ -3,7 +3,7 @@ use std::{collections::BinaryHeap, fmt::Display};
 static INPUT: &str = include_str!("../data/d12.txt");
 static _TEST: &str = include_str!("../data/d12_test.txt");
 
-#[derive(Debug, Clone, Clone)]
+#[derive(Debug, Clone)]
 struct Graph {
     start: Node,
     goal: Node,
