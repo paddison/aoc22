@@ -8,17 +8,10 @@ fn parse(input: &'static str) -> Vec<Rucksack> {
 
 fn divide_into_group(rucksacks: Vec<Rucksack>) -> Vec<[Rucksack; 3]> {
     let mut all_groups = Vec::new();
-    let mut group = [Rucksack { items: ""}; 3];
 
-    for (i, rs) in rucksacks.into_iter().enumerate() {
-        if i % 3 == 0  && i != 0 {
-            all_groups.push(group);
-            group = [Rucksack { items: ""}; 3]; 
-        } 
-        group[i % 3] = rs;
-    }    
-    
-    all_groups.push(group);
+    for chunk in rucksacks.chunks(3) {
+        all_groups.push([chunk[0], chunk[1], chunk[2]]);
+    }
  
     all_groups
 }
