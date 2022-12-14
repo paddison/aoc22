@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 pub(crate) trait BitMap {
     const DIM: usize;
     const N_WIDTH: usize;
@@ -6,6 +8,7 @@ pub(crate) trait BitMap {
     fn is_set(&self, row: usize, col: usize) -> bool;
     fn idx(row: usize, col: usize) -> (usize, u32); // (array index, bit index)
     fn count_bits(&self) -> usize;
+    fn print(&self);
 }
 
 macro_rules! impl_bm {
@@ -53,6 +56,18 @@ macro_rules! impl_bm {
                 }
                 count
             } 
+
+            fn print(&self) {
+                let mut string_repr = String::new();
+                for row in self.chunks(Self::DIM / Self::N_WIDTH) {
+                    for n in row {
+                        let n_repr = format!("{:0width$b}", n, width = Self::N_WIDTH).chars().map(|c| if c == '1' { '#' } else { '.' }).collect::<String>();
+                        let _ = write!(string_repr, "{}", n_repr);
+                    }
+                    string_repr.push('\n');
+                }
+                println!("{}", string_repr);
+            }
         }
     )
 }
