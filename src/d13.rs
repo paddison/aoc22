@@ -9,6 +9,16 @@ enum Packet {
     Value(u64),
 }
 
+impl PartialEq for Packet {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::List(l0), Self::List(r0)) => l0 == r0,
+            (Self::Value(l0), Self::Value(r0)) => l0 == r0,
+            _ => false
+        }
+    }
+}
+
 impl Packet {
     fn compare(lhs: &Self, rhs: &Self) -> Ordering {
         use self::Packet::*;

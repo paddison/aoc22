@@ -3,6 +3,7 @@ pub(crate) trait BitMap {
     const N_WIDTH: usize;
 
     fn set_bit(&mut self, row: usize, col: usize);
+    fn is_set(&self, row: usize, col: usize) -> bool;
     fn idx(row: usize, col: usize) -> (usize, u32); // (array index, bit index)
     fn count_bits(&self) -> usize;
 }
@@ -23,6 +24,16 @@ macro_rules! impl_bm {
                 let n = self.get_mut(arr_idx).unwrap();
                 let bit = (2 as $tp).pow(bit_idx);
                 *n |= bit;
+            }
+
+            fn is_set(&self, row: usize, col: usize) -> bool {
+                if row >= Self::DIM || col >= Self::DIM {
+                    return false;
+                }
+
+                let (arr_idx, bit_idx) = Self::idx(row, col);
+                let n = *self.get(arr_idx).unwrap();
+                (n >> (Self::N_WIDTH - bit_idx as usize) as $tp) == 1
             }
         
             fn idx(row: usize, col: usize) -> (usize, u32) {
