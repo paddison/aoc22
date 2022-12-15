@@ -85,12 +85,13 @@ impl Cave {
         sand.1 == self.coords.len() - 1
     }
 
-    fn drop_sand(&self) -> Option<(usize, usize)> {
-        let mut sand = (START, 0);
+    fn drop_sand(&self, drop_path: &mut Vec<(usize, usize)>) -> Option<(usize, usize)> {
+        let mut sand = *drop_path.last().unwrap();//(START, 0);
         while let Some(new_pos) = self.update_pos(sand) {
             if self.falls_through(new_pos) {
                 return None;
             }
+            drop_path.push(new_pos);
             sand = new_pos;
         }
         Some(sand)
@@ -102,7 +103,9 @@ impl Cave {
 
     fn simulate_p1(&mut self) -> usize {
         let mut count = 0;
-        while let Some(sand) = self.drop_sand() {
+        let mut drop_path = vec![(START, 0)];
+        while let Some(sand) = self.drop_sand(&mut drop_path) {
+            Self::trim_path(&mut drop_path);
             self[sand] = true;
             count += 1;
         }
@@ -112,15 +115,30 @@ impl Cave {
     fn simulate_p2(&mut self, bottom: usize) -> usize {
         self.coords[bottom] = [true; CAVE_COLS];
         let mut count = 0;
-        while let Some(sand) = self.drop_sand() {
+        let mut drop_path = vec![(START, 0)]; 
+        while let Some(sand) = self.drop_sand(&mut drop_path) {
             self[sand] = true;
             count += 1;
             if self.is_end(sand) {
                 break;
             }
+            Self::trim_path(&mut drop_path);
         }
 
         count
+    }
+
+    fn trim_path(drop_path: &mut Vec<(usize, usize)>) {
+        let mut prev_pos = drop_path.last().unwrap();
+        let mut drain_start = 0;
+        for (i, pos) in drop_path.iter().enumerate().rev().skip(1) {
+            if pos.0 == prev_pos.0 {
+                drain_start = i;
+                break;
+            }
+            prev_pos = pos;
+        }
+        drop_path.drain(drain_start + 1..);
     }
 }
 
