@@ -1,3 +1,5 @@
+use std::{ops::{Index, IndexMut}, fmt::Display};
+
 const LINE: [[bool; 4]; 1] = [[true, true, true, true]];
 const CROSS: [[bool; 3]; 3] = [[false, true, false],
                                 [true, true, true],
@@ -15,10 +17,16 @@ const BLOCK: [[bool; 2]; 2] = [[true, true],
                                 [true, true]];
 
 const N_SHAPES: usize = 5;
-static SHAPE_ORDER: [Shape; N_SHAPES] = [Shape::Line, Shape::Cross, Shape::L, Shape::Stick, Shape::Stick];
+
+static SHAPE_ORDER: [Shape; N_SHAPES] = [Shape::Line, Shape::Cross, Shape::L, Shape::Stick, Shape::Block];
+static CHAMBER_WIDTH: usize = 7;
+static INPUT: &str = include_str!("../data/d17.txt");
+static _TEST: &str = include_str!("../data/d17_test.txt");
+
 
 /// positions are: (x, y), where 0, 0 is top left of the grid
 /// new rows are added at the top
+#[derive(Debug)]
 struct Chamber {
     grid: Vec<[bool;7]>,
     cur_shape: usize,
@@ -53,12 +61,48 @@ impl Chamber {
         // for each position, check if there's a collision
         for (y, row) in rock.shape.iter().enumerate().rev() {
             for (x, brick) in row.iter().enumerate() {
-                if brick && !self[brick.pos(x, y)] {
+                if *brick && self[rock.pos(x, y)]{
                     return true;
                 }                                 
             }
         }
         false 
+    }
+    //......#
+    fn move_rock(&self, rock: &mut Rock, dir: Dir) -> bool {
+        let new_pos = match (dir, rock.pos) {
+            (Dir::Down, (_, y_pos)) if rock.height() + y_pos <= self.height() => (rock.pos.0, rock.pos.1 + 1),
+            (Dir::Left, (x_pos, _)) if x_pos > 0 => (rock.pos.0 - 1, rock.pos.1),
+            (Dir::Right, (x_pos, _)) if x_pos + rock.width() < CHAMBER_WIDTH => (rock.pos.0 + 1, rock.pos.1),
+            _ => return false,
+        };
+
+        let old_pos = rock.pos;
+        rock.pos = new_pos;
+
+        if self.collides(rock) {
+            rock.pos = old_pos;
+            return false;
+        }
+
+        return true;
+    }
+
+    fn step(&mut self, rock: &mut Rock, dir: Dir) {
+        match dir {
+            Dir::Down => if !self.move_rock(rock, dir) {
+                self.stop_rock(rock)
+            }
+            _ => { self.move_rock(rock, dir); },
+        }
+    }
+
+    fn stop_rock(&mut self, rock: &Rock) {
+        for (y, row) in rock.shape.iter().enumerate().rev() {
+            for (x, brick) in row.iter().enumerate() {
+                self[rock.pos(x, y)] = *brick;                                
+            }
+        }
     }
 }
 
@@ -79,10 +123,25 @@ impl Iterator for Chamber {
 }
 
 impl Index<(usize, usize)> for Chamber {
-    type Item = bool
+    type Output= bool;
     
-    fn index(&self, idx: (usize, usize)) -> &Self::Item {
+    fn index(&self, idx: (usize, usize)) -> &Self::Output {
         &self.grid[idx.1][idx.0]
+    }
+}
+
+impl IndexMut<(usize, usize)> for Chamber {
+    fn index_mut(&mut self, idx: (usize, usize)) -> &mut Self::Output {
+        &mut self.grid[idx.1][idx.0]
+    }
+}
+
+impl Display for Chamber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for row in &self.grid {
+            let _ = writeln!(f, "{}", row.iter().map(|b| if *b { '#' } else { '.' }).collect::<String>());
+        }
+        Ok(())
     }
 }
 
@@ -96,26 +155,23 @@ impl Rock {
        self.shape.len()
     }
     
+    fn width(&self) -> usize {
+        self.shape[0].len()
+    }
+
     #[inline(always)]
     fn pos(&self, x: usize, y: usize) -> (usize, usize) {
         (self.pos.0 + x, self.pos.1 + y)
-    }
-    
-    fn update_pos(&mut self, dir: Dir) {
-        match dir {
-            Dir::Down => self.pos
-            Dir::Left => 
-            Dir::Right => 
-        }
     }
 }
 
 impl From<&Shape> for Rock {
     fn from(shape: &Shape) -> Self {
-        Self { pos: (0, 0), shape: shape.to_vec() }
+        Self { pos: (2, 0), shape: shape.to_vec() }
     }
 }
 
+#[derive(Clone, Copy)]
 enum Dir {
     Down,
     Left,
@@ -142,9 +198,36 @@ impl Shape {
     }
 }
 
+fn parse(input: &str) -> Vec<Dir> {
+    input.chars().map(|c| if c == '>' { Dir::Right } else { Dir::Left} ).collect()
+}
+
+fn run(dirs: Vec<Dir>) -> usize {
+    let mut chamber = Chamber::new();
+    let mut rock = start_next(&mut chamber);
+    for dir in dirs {
+        if !chamber.move_rock(&mut rock, Dir::Down) {
+            chamber.stop_rock(&rock);
+            println!("{}", chamber);
+            rock = start_next(&mut chamber);
+            let _ = chamber.move_rock(&mut rock, Dir::Down);
+        }
+
+        chamber.move_rock(&mut rock, dir);
+    }
+
+    0
+}
+
 fn shape_to_vec<S, I, T>(shape: S) -> Vec<Vec<T>> 
 where S: IntoIterator<Item = I>,
       I: IntoIterator<Item = T>,
 {
     shape.into_iter().map(|inner| inner.into_iter().collect()).collect()
+}
+
+#[test]
+fn test_run() {
+    let dirs = parse(_TEST);
+    run(dirs);
 }
