@@ -48,8 +48,17 @@ impl Chamber {
         self.grid.len()
     }
 
-    fn collides(rock: &Rock) -> bool {
-        false
+    fn collides(&self, rock: &Rock) -> bool {
+        // scan rock from top to bottom 
+        // for each position, check if there's a collision
+        for (y, row) in rock.shape.iter().enumerate().rev() {
+            for (x, brick) in row.iter().enumerate() {
+                if brick && !self[brick.pos(x, y)] {
+                    return true;
+                }                                 
+            }
+        }
+        false 
     }
 }
 
@@ -69,6 +78,14 @@ impl Iterator for Chamber {
     }
 }
 
+impl Index<(usize, usize)> for Chamber {
+    type Item = bool
+    
+    fn index(&self, idx: (usize, usize)) -> &Self::Item {
+        &self.grid[idx.1][idx.0]
+    }
+}
+
 struct Rock {
     pos: (usize, usize),
     shape: Vec<Vec<bool>>,
@@ -78,6 +95,19 @@ impl Rock {
     fn height(&self) -> usize {
        self.shape.len()
     }
+    
+    #[inline(always)]
+    fn pos(&self, x: usize, y: usize) -> (usize, usize) {
+        (self.pos.0 + x, self.pos.1 + y)
+    }
+    
+    fn update_pos(&mut self, dir: Dir) {
+        match dir {
+            Dir::Down => self.pos
+            Dir::Left => 
+            Dir::Right => 
+        }
+    }
 }
 
 impl From<&Shape> for Rock {
@@ -85,6 +115,12 @@ impl From<&Shape> for Rock {
         Self { pos: (0, 0), shape: shape.to_vec() }
     }
 }
+
+enum Dir {
+    Down,
+    Left,
+    Right
+} 
 
 enum Shape {
     Line,
