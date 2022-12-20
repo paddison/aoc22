@@ -23,6 +23,11 @@ pub fn get_solution_2() -> usize {
     parse(include_str!("../data/d01.txt"))[..3].iter().sum()
 }
 
+// day 20
+static KEY: i64 = 811589153;
+static INPUT: &str = include_str!("../data/d20.txt");
+static _TEST: &str = include_str!("../data/d20_test.txt");
+
 fn parse(input: &str) -> Vec<(i64, usize)>{
 	input.lines().enumerate().map(|(n, i)| (n.parse().unwrap(), i)).collect()
 }
@@ -78,7 +83,13 @@ fn decrypt(nums: &mut Vec<(i64, usize)>) {
         mix_file(nums);
     }
 }
-        
+
+fn get_solution_1() -> i64 {
+    let mut nums = parse(INPUT);
+    mix_file(&mut nums);
+    coordinates(&mut nums)
+}        
+                        
 fn get_solution_2() -> i64 {
     let mut nums = parse(INPUT);
     add_key(&mut nums, KEY);
