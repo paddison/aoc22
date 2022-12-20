@@ -29,7 +29,7 @@ static INPUT: &str = include_str!("../data/d20.txt");
 static _TEST: &str = include_str!("../data/d20_test.txt");
 
 fn parse(input: &str) -> Vec<(i64, usize)>{
-	input.lines().enumerate().map(|(n, i)| (n.parse().unwrap(), i)).collect()
+	input.lines().enumerate().map(|(i, n)| (n.parse().unwrap(), i)).collect()
 }
 
 fn calc_idx(n: i64, idx: i64) -> i64 {
