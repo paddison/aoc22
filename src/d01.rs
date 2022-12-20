@@ -42,7 +42,7 @@ fn calc_shift(ring_size: i64, idx: i64) -> i64 {
 
 fn shift(nums: &mut Vec<(i64, usize)>, idx: usize) {
 	let entry = nums.remove(idx);
-	let ring_size = nums.len();
+	let ring_size = nums.len() as i64;
 	let new_idx = calc_shift(ring_size, calc_idx(entry.0, idx as i64));
 	if new_idx == 0 {
 		nums.push(entry);
