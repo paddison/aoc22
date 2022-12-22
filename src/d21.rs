@@ -44,13 +44,12 @@ impl Op {
     fn exec<T>(&self, lhs: T, rhs: T) -> T 
     where T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T>
     {
-        let op = match self {
+        (match self {
             Op::Add => T::add,
             Op::Sub => T::sub,
             Op::Mul => T::mul,
             Op::Div => T::div,
-        };
-        op(lhs, rhs)
+        })(lhs, rhs)
     }
 
     fn inv(&self) -> Self {
@@ -124,7 +123,7 @@ pub fn get_solution_2() -> f64 {
         _ => unreachable!(),
     };
     let (humn, other) = if contains_humn(lhs, &monkeys) { (lhs, rhs) } else { (rhs, lhs) }; 
-    // why do i need to pass the negative result? 
+    // because i'm to lazy to fix Op::inv, i pass the negative result
     let result = calculate(other, &mut monkeys);
     determine_num(humn, &mut monkeys, -result as f64) 
 }
