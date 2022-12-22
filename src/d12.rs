@@ -136,7 +136,7 @@ impl PartialOrd for Node {
 
 fn parse(input: &str) -> Graph {
     let mut nodes = Vec::new();
-    let cols = input.find('\n').unwrap();
+    let cols = input.find(['\r', '\n']).unwrap();
     let rows = input.len() / cols;
     let mut start = Node { height: 0, pos: (0, 0), cost: 0};
     let mut goal = Node { height: 26, pos: (0, 0), cost: usize::MAX };
@@ -155,7 +155,7 @@ fn parse(input: &str) -> Graph {
 
 pub fn get_solution_1() -> usize {
     let mut g = parse(INPUT);
-    g.walk().unwrap()
+    g.walk().unwrap_or(0)
 }
 
 pub fn get_solution_2() -> usize {

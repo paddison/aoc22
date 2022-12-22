@@ -6,7 +6,7 @@ static _TEST: &str = include_str!("../data/d18_test.txt");
 type Cube = (i64, i64, i64);
 
 fn parse(input: &str) -> HashSet<Cube> {
-    input.split('\n').map(|l| match &l.split(',').collect::<Vec<&str>>()[..] {
+    input.lines().map(|l| match &l.split(',').collect::<Vec<&str>>()[..] {
         [x, y, z] => (x.parse().unwrap(), y.parse().unwrap(), z.parse().unwrap()),
         _ => unreachable!(),
     }).collect()

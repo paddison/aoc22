@@ -218,7 +218,7 @@ fn run(dirs: Vec<Dir>) -> usize {
         if !chamber.move_rock(&mut rock, Dir::Down) {
             chamber.stop_rock(&rock);
             c += 1;
-            if c == 1_000_000_000_000 {
+            if c == 2022 {
                 // println!("{}", chamber);
                 return chamber.height() - chamber.get_highest() + h;
             }

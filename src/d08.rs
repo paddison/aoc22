@@ -185,12 +185,14 @@ impl Grid {
     }
 
     fn is_visible(&self, x: usize, y: usize) -> bool {
-        let tree_height = self.get(x, y).unwrap();
-
-        self.check_line(true, y, 0, x, tree_height) ||
-        self.check_line(true, y, x + 1, self.dim.0, tree_height) ||
-        self.check_line(false, x, 0, y, tree_height) ||
-        self.check_line(false, x, y + 1, self.dim.1, tree_height)
+        if let Some(tree_height) = self.get(x, y) {
+            self.check_line(true, y, 0, x, tree_height) ||
+            self.check_line(true, y, x + 1, self.dim.0, tree_height) ||
+            self.check_line(false, x, 0, y, tree_height) ||
+            self.check_line(false, x, y + 1, self.dim.1, tree_height)
+        } else {
+            false
+        }
     }
 
     // is_x inidicates if we go through a row (true), or column (false)
@@ -199,9 +201,11 @@ impl Grid {
             let other_height = match is_x {
                 true => self.get(coord, other_coord),
                 false => self.get(other_coord, coord),
-            }.unwrap();
-            if other_height >= height {
+            };
+            if let Some(h) = other_height {
+                if h >= height {
                 return false;
+                }
             }
         }
 
@@ -244,10 +248,11 @@ impl Grid {
             let other_height = match is_x {
                 true => self.get(coord, other_coord),
                 false => self.get(other_coord, coord),
-            }.unwrap();
-
-            if other_height >= height {
-                return i + 1;
+            };
+            if let Some(h) = other_height {
+                if h >= height {
+                    return i + 1;
+                }
             }
         }
 
