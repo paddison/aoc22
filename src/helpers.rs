@@ -1,5 +1,21 @@
 use std::fmt::Write;
 
+pub(crate) fn gcd<T>(mut a: T, mut b: T) -> T 
+where T: std::ops::Rem<Output = T> + PartialOrd + Default + Copy
+{
+    if a < b {
+        std::mem::swap(&mut a, &mut b);
+    } 
+    let mut t;
+    while b != T::default(){
+        t = b;
+        b = a % b;
+        a = t;
+    }
+
+    a
+}
+
 pub(crate) trait BitMap {
     const DIM: usize;
     const N_WIDTH: usize;
