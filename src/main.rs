@@ -22,6 +22,7 @@ mod d18;
 mod d20;
 mod d21;
 mod d22;
+mod d23;
 
 fn main() {
     println!("Day\t\truntime\tresult");
@@ -190,6 +191,14 @@ fn main() {
     let start = Instant::now();
     let result = d22::get_solution_2();
     println!("Day 22.2\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
+    let result = d23::get_solution_1();
+    println!("Day 23.1\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
+    let result = d23::get_solution_2();
+    println!("Day 23.2\t{}us\t{}", start.elapsed().as_micros(), result);
 
     println!("\nTotal runtime: {}ms", start_all.elapsed().as_millis());
 }

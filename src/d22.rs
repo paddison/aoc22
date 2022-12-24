@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::Display;
-use std::ops::{Add, Sub, Index};
+use std::ops::Index;
 
 use crate::helpers::gcd;
 

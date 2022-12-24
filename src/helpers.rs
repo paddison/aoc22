@@ -16,6 +16,32 @@ where T: std::ops::Rem<Output = T> + PartialOrd + Default + Copy
     a
 }
 
+pub trait Complex {
+    fn c_add(&self, other: Self) -> Self;
+    fn c_mul(&self, other: Self) -> Self;
+    fn c_div(&self, other: Self) -> Self;
+}
+
+impl<T> Complex for (T, T) 
+where T: std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T> + std::ops::Div<Output = T> + Copy
+{
+    fn c_add(&self, other: Self) -> Self {
+        (self.0 + other.0, self.1 + other.1)
+    }
+
+    fn c_mul(&self, other: Self) -> Self {
+        (self.0 * other.0 - self.1 * other.1, 
+         self.0 * other.1 + self.1 * other.0)
+    }
+
+    fn c_div(&self, other: Self) -> Self {
+        let divisor = self.0 * self.0 + self.1 * self.1;
+        let real = self.0 * other.0 + self.1 * other.1;
+        let complex = self.0 * other.1 - self.1 * other.0;
+        ( real / divisor, complex / divisor)
+    }
+}
+
 pub(crate) trait BitMap {
     const DIM: usize;
     const N_WIDTH: usize;
