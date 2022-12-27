@@ -47,7 +47,5 @@ fn to_snafu(n: u64) -> String {
 #[test]
 fn test_calc_num() {
     let snafus = parse(_TEST);
-    for snafu in snafus {
-        println!("{}", to_dec(snafu));
-    }
+    println!("{}", sum_snafus(snafus));
 }
