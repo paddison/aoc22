@@ -1,4 +1,5 @@
-use std::{ops::{Index, IndexMut}, fmt::Display};
+use core::slice;
+use std::{ops::{Index, IndexMut}, fmt::Display, collections::{HashMap, HashSet}};
 
 const LINE: [[bool; 4]; 1] = [[true, true, true, true]];
 const CROSS: [[bool; 3]; 3] = [[false, true, false],
@@ -55,6 +56,10 @@ impl Chamber {
     fn get_highest(&self) -> usize {
         self.grid.iter().rev().enumerate().find(|(_, r)| r.iter().any(|r| *r)).map(|(i, _)| i).unwrap_or(self.grid.len())
     } 
+
+    fn highest_rock(&self) -> usize {
+        self.grid.iter().enumerate().find(|(_, r)| r.iter().all(|r| !*r)).map(|(i, _)| i).unwrap_or(self.grid.len())
+    }
 
     /// return height of the grid
     #[inline(always)]
@@ -144,8 +149,8 @@ impl IndexMut<(usize, usize)> for Chamber {
 
 impl Display for Chamber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for row in self.grid.iter().rev() {
-            let _ = writeln!(f, "{}", row.iter().map(|b| if *b { '#' } else { '.' }).collect::<String>());
+        for (i, row) in self.grid.iter().enumerate().rev() {
+            let _ = writeln!(f, "|{}|{}", row.iter().map(|b| if *b { '#' } else { '.' }).collect::<String>(), i);
         }
         Ok(())
     }
@@ -231,6 +236,70 @@ fn run(dirs: Vec<Dir>) -> usize {
     unreachable!();
 }
 
+fn build_n_blocks(n: usize, dirs: Vec<Dir>, blocks_rem: usize) -> Chamber {
+    let mut chamber = Chamber::new();
+    let mut rock = start_next(&mut chamber);
+    let mut n_blocks = 0;
+    let height_init = 158;
+    let height_repeat = 2781 - 158;
+    let mut blocks_init = 0;
+    let mut blocks_repeat = 0;
+    // let mut blocks_rem = 102;
+
+    for dir in dirs.iter().cycle() {
+        chamber.move_rock(&mut rock, *dir);
+        if !chamber.move_rock(&mut rock, Dir::Down) {
+            chamber.stop_rock(&rock);
+            n_blocks += 1;
+            if n_blocks == n {
+                return chamber;
+            }
+            if chamber.highest_rock() == height_init {
+                blocks_init = n_blocks;
+                println!("blocks_init: {}", blocks_init);
+            }
+
+            if chamber.highest_rock() == height_repeat + height_init {
+                blocks_repeat = n_blocks - blocks_init;
+                println!("blocks_repeat:{}", blocks_repeat);
+
+            }
+
+            if n_blocks == blocks_init + blocks_rem {
+                println!("height_rem: {}", chamber.highest_rock() - height_init);
+                
+            }
+            rock = start_next(&mut chamber);
+        }
+    }
+    unreachable!();
+}
+
+// (rocks_init, rocks_repeat)
+fn build_until_repeat(dirs: Vec<Dir>) -> (usize, usize) {
+    let mut chamber = Chamber::new();
+    let mut rock = start_next(&mut chamber);
+    let mut map = HashMap::new();
+    let mut n_rocks = 0;
+
+    for (i, dir) in dirs.iter().enumerate().cycle() {
+        // move in dir
+        chamber.move_rock(&mut rock, *dir);
+        // move down and check for stop
+        if !chamber.move_rock(&mut rock, Dir::Down) {
+            chamber.stop_rock(&rock);
+            let idx = (chamber.cur_shape + N_SHAPES - 1) % N_SHAPES;
+            if let Some(n_rocks_prev) = map.insert((idx, i, rock.pos.0), n_rocks) {
+                return (n_rocks_prev, n_rocks);
+            }
+            n_rocks += 1;
+            rock = start_next(&mut chamber);
+        }
+    }
+
+    unreachable!();
+}
+
 fn shape_to_vec<S, I, T>(shape: S) -> Vec<Vec<T>> 
 where S: IntoIterator<Item = I>,
       I: IntoIterator<Item = T>,
@@ -244,8 +313,19 @@ pub fn get_solution_1() -> usize {
     h
 }
 
+pub fn get_solution_2() -> usize {
+    let n = 1_000_000_000_000;
+    let height_init = 158;
+    let height_repeat = 2781 - 158; 
+    let height_rem = 160;
+    let blocks_init = 98;
+    let blocks_repeat = 1700;
+    let _blocks_rem: usize = (n - blocks_init) % blocks_repeat;
+    height_init + n / blocks_repeat * height_repeat + height_rem
+}
+
 #[test]
 fn test_run() {
-    get_solution_1();
-    println!("{}", parse(INPUT).len());
+    let dirs = parse(INPUT);
+    let _ = build_until_repeat(dirs);
 }

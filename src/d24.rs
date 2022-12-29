@@ -1,4 +1,4 @@
-use std::{fmt::Write, collections::{BinaryHeap, HashSet, HashMap}};
+use std::{fmt::Write, collections::{BinaryHeap, HashSet}};
 
 static INPUT: &str = include_str!("../data/d24.txt");
 static _TEST: &str = include_str!("../data/d24_test.txt");
@@ -10,9 +10,7 @@ fn parse(input: &str) -> (State, Winds) {
     let mut winds = Vec::new();
     let width = input.find('\n').unwrap();
     let height = input.len() / width;
-    // let mut map = Vec::new();
     for (row, line) in input.lines().enumerate() {
-        let mut map_row: Vec<bool> = Vec::new();
         for (col, c) in line.chars().enumerate() {
             let dir = match c {
                 '^' => (-1, 0),
@@ -21,7 +19,6 @@ fn parse(input: &str) -> (State, Winds) {
                 '<' => (0, -1),
                 _ => continue
             };
-                
                 winds.push(Wind { dir, pos: (row, col) });
             }
         }
@@ -179,10 +176,10 @@ fn manhattan(start: (usize, usize), goal: (usize, usize)) -> usize {
 fn a_star(state: State, winds: &mut Winds) -> State {
     let mut queue = BinaryHeap::new();
     let mut visited = HashSet::from([(state.steps, state.player)]);
+
     queue.push(state);
     while !queue.is_empty() {
         let state = queue.pop().unwrap();
-        // println!("{}", state.to_string(&winds));
         
         if state.is_goal() {
             return state;
@@ -215,9 +212,4 @@ pub fn get_solution_2() -> usize {
     // go to exit again
     state.goal = (state.dim.0 - 1, state.dim.1 - 2);
     a_star(state, &mut winds).steps
-}
-
-#[test]
-fn test_neighbours() {
-    println!("{:?}", get_solution_2());
 }

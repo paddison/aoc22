@@ -12,14 +12,14 @@ type Entry = (Robot, (u32, u32, u32));
 // state are the resources and active bots
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq,)]
 struct State {
-    ore: u32,
-    clay: u32,
-    obsidian: u32,
-    geode: u32,
     r_ore: u32,
     r_clay: u32,
     r_obsidian: u32,
     r_geode: u32,
+    ore: u32,
+    clay: u32,
+    obsidian: u32,
+    geode: u32,
     rem_steps: u32,
 }
 
@@ -84,10 +84,13 @@ impl State {
     }
 
     fn score(&self) -> u32 {
-        self.ore + self.r_ore * self.rem_steps +
-        (self.clay + self.r_clay * self.rem_steps) * 100 +
-        (self.obsidian + self.r_obsidian * self.rem_steps) * 10000 +
-        (self.geode + self.geode * self.rem_steps) * 1000000
+        let sum = self.r_ore + self.ore +
+            (self.r_clay + self.clay) * 10 +
+            (self.r_obsidian + self.obsidian) * 100 +
+            (self.r_geode + self.geode) * 1000 + self.rem_steps;
+        // println!("{}", sum);
+        sum
+
     }
 }
 
@@ -116,71 +119,54 @@ fn parse(input: &str) -> Vec<BluePrint> {
     bps
 }
 
-fn run_2(bp: BluePrint) {
-    let state = State::new();
-    let mut queue = BinaryHeap::new();
-    queue.push(state);
-    let mut max = 0;
-
-    while !queue.is_empty() {
-        let mut state = queue.pop().unwrap();
-        state.rem_steps -= 1;
-        if state.rem_steps == 0 {
-            if state.geode > max {
-                max = state.geode;
-            }
-            continue;
-        }
-        let robots = state.get_available_robots(&bp);
-        state.update_resources();
-        for entry in robots {
-            let mut new_state = state;
-            new_state.build_robot(entry);
-            queue.push(new_state);
-        }
-        queue.push(state);
-    }
-    println!("{}", max);
-}
-
-fn run(mut state: State, bp: BluePrint, max: &mut u32, rem_steps: u32, scores: &mut HashSet::<u32>) {
+fn run(mut state: State, bp: BluePrint, max: &mut u32, rem_steps: u32) {
     let next = state.get_available_robots(&bp);
  
     state.update_resources();
     // check if current max can still be reached:
     if rem_steps == 1 {
-        scores.insert(state.geode);
         if state.geode > *max {
-            *max = state.geode
+            *max = state.geode;
+            println!("{}", max);
         }
         return;
     }
 
     // always try to build the best robot
-    let mut new_states = Vec::new();
-    for entry in [bp[3], bp[2], bp[1], bp[0]] {
+    for entry in next {
+        let mut new_s = state;
+        new_s.build_robot(entry);
+        run(new_s, bp, max, rem_steps - 1);
+    }
+    run(state, bp, max, rem_steps - 1);
+}
 
-        if state.can_be_built(entry.1) {
+fn search(state: State, bp: BluePrint) {
+    let mut queue = BinaryHeap::new();
+    queue.push(state);
+    while !queue.is_empty() {
+        let mut state = queue.pop().unwrap();
+        if state.rem_steps == 0 {
+            println!("{}", state.geode);
+            continue;
+        }
+        let next = state.get_available_robots(&bp);
+        state.update_resources();
+        state.rem_steps -= 1;
+        for entry in next {
             let mut new_s = state;
             new_s.build_robot(entry);
-            new_states.push(new_s);
+            queue.push(new_s);
         }
+        queue.push(state);
     }
-    if let Some(best) = new_states.iter().max_by(|a, b| a.score().cmp(&b.score())) {
-        run(*best, bp, max, rem_steps - 1, scores)
-    }
-
-    run(state, bp, max, rem_steps - 1, scores);
 }
 
 pub fn get_solution_1() -> u32 {
     let state = State::new();
     let bps = parse(_TEST);
     let mut max = 0;
-    let mut scores = HashSet::new(); 
-    run(state, bps[0], &mut max, 24, &mut scores);
-    println!("{}", scores.len());
-    println!("{:?}", scores.iter().max());
+    run(state, bps[0], &mut max, 24);
     max 
 }
 
@@ -229,8 +215,8 @@ fn test_run() {
     let state = State::new();
     let bps = parse(_TEST);
     let mut max = 0;
+    search(state, bps[1])
     // let mut scores = HashSet::new();
-    run_2(bps[0]);
     // println!("{}", scores.len());
     // println!("{:?}", scores.iter().max());
 }

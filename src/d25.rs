@@ -25,27 +25,42 @@ fn to_dec(snafu: Vec<char>) -> u64 {
     unreachable!();
 }
 
-fn sum_snafus(snafus: Vec<Vec<char>>) -> u64 {
-    snafus.into_iter().map(|snafu| to_dec(snafu)).sum()
+fn to_base_5(mut n: u64) -> Vec<u32> {
+    let mut n_string = Vec::new();
+
+    while n > 0 {
+        n_string.push((n % 5) as u32);
+        n /= 5;
+    }
+
+    n_string
 }
 
-fn to_snafu(n: u64) -> String {
+fn to_snafu(mut n_base_5: Vec<u32>) -> String {
     // determine largest exp
-    let mut exp = 0;
-    let cmp = 0;
-    loop {
-        let new = cmp + 2 * 5_u64.pow(exp);
-        if new > n {
-            break exp;
-        }
-        exp += 1;
+    let mut snafu = Vec::new();
 
-    };
-    "".to_owned()
+    for i in 0..n_base_5.len() {
+        match n_base_5[i] {
+            5 => {
+                n_base_5[i + 1] += 1;
+                snafu.push('0');
+            }
+            4 => {
+                n_base_5[i + 1] += 1;
+                snafu.push('-');
+            },
+            3 => {
+                n_base_5[i + 1] += 1;
+                snafu.push('=');
+            },
+            n => snafu.push(char::from_digit(n, 10).unwrap()),
+        }
+    }
+
+    snafu.iter().rev().collect()
 }
 
-#[test]
-fn test_calc_num() {
-    let snafus = parse(_TEST);
-    println!("{}", sum_snafus(snafus));
+pub fn get_solution_1() -> String {
+    to_snafu(to_base_5(parse(INPUT).into_iter().map(|snafu| to_dec(snafu)).sum()))
 }
