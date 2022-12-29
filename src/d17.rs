@@ -1,331 +1,194 @@
-use core::slice;
-use std::{ops::{Index, IndexMut}, fmt::Display, collections::{HashMap, HashSet}};
+use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 
-const LINE: [[bool; 4]; 1] = [[true, true, true, true]];
-const CROSS: [[bool; 3]; 3] = [[false, true, false],
-                                [true, true, true],
-                                [false, true, false]];
-const L: [[bool; 3]; 3] = [[false, false, true],
-                            [false, false, true],
-                            [true, true, true]];
+type Pos = (isize, isize); // (row, col)
 
-const STICK: [[bool; 1]; 4] = [[true],
-                                [true],
-                                [true],
-                                [true]];
-
-const BLOCK: [[bool; 2]; 2] = [[true, true],
-                                [true, true]];
-
-const N_SHAPES: usize = 5;
-
-static SHAPE_ORDER: [Shape; N_SHAPES] = [Shape::Line, Shape::Cross, Shape::L, Shape::Stick, Shape::Block];
-static CHAMBER_WIDTH: usize = 7;
-static INPUT: &str = include_str!("../data/d17.txt");
 static _TEST: &str = include_str!("../data/d17_test.txt");
+static INPUT: &str = include_str!("../data/d17.txt");
 
+static MINUS: [Pos; 4] = [(0, 2), (0, 3), (0, 4), (0, 5)];
+static PLUS: [Pos; 4] = [(2,  3), (1, 2), (1, 4), (0, 3)];
+static L: [Pos; 5] = [(2,  4), (1, 4), (0, 2), (0, 3), (0, 4)];
+static I: [Pos; 4] = [(3, 2), (2, 2), (1, 2), (0, 2)];
+static QUADRAT: [Pos; 4] = [(1, 2), (1, 3), (0, 2), (0, 3)];
 
-/// positions are: (x, y), where 0, 0 is top left of the grid
-/// new rows are added at the top
-#[derive(Debug)]
+static MIN_DIST: isize = 3;
+
 struct Chamber {
-    grid: Vec<[bool; 7]>,
-    cur_shape: usize,
+    rocks: HashSet<Pos>,
+    width: isize,
 }
 
 impl Chamber {
     fn new() -> Self {
-        Self { grid: vec![[false; 7]; 3], cur_shape: 0 }
+        Chamber{ rocks: HashSet::new(), width: 7 }
     }
 
-    /// Adds the necessary rows to the grid for the specified rock
-    fn add_rows(&mut self, rock: &Rock) {
-        // determine how many rows need to be added
-        let n_rows = rock.height() as isize - self.get_highest() as isize + 3;
-        if n_rows < 0 {
-            for _ in 0..-n_rows {
-                self.grid.pop();
-            }
-        } else {
-            for _ in 0..n_rows {
-                self.grid.push([false; 7]);
-            }
-        }
-    }
-    /// Gets highest position where a rock is
-    fn get_highest(&self) -> usize {
-        self.grid.iter().rev().enumerate().find(|(_, r)| r.iter().any(|r| *r)).map(|(i, _)| i).unwrap_or(self.grid.len())
-    } 
-
-    fn highest_rock(&self) -> usize {
-        self.grid.iter().enumerate().find(|(_, r)| r.iter().all(|r| !*r)).map(|(i, _)| i).unwrap_or(self.grid.len())
+    fn height(&self) -> isize {
+        self.rocks.iter().map(|(row, _)| row + 1).max().unwrap_or(0)
     }
 
-    /// return height of the grid
-    #[inline(always)]
-    fn height(&self) -> usize {
-        self.grid.len()
-    }
-
-    fn collides(&self, rock: &Rock) -> bool {
-        // scan rock from top to bottom 
-        // for each position, check if there's a collision
-        for (y, row) in rock.shape.iter().enumerate() {
-            for (x, brick) in row.iter().enumerate() {
-                if *brick && self[rock.pos(x, y)]{
-                    return true;
-                }                                 
+    fn determine_rock_pos(&self, rock: &Rock, dir: Dir) -> Option<Vec<Pos>> {
+        // move shape in direction
+        let shape = rock.pos.iter().map(|pos| dir + *pos).collect::<Vec<Pos>>();
+        for pos in &shape {
+            // collision with wall, floor or other rocks
+            if pos.1 < 0 || pos.1 >= self.width || pos.0 < 0 || self.rocks.contains(&pos) {
+                return None;
             }
         }
-        false 
+        Some(shape)
     }
-    //......#
-    fn move_rock(&self, rock: &mut Rock, dir: Dir) -> bool {
-        let new_pos = match (dir, rock.pos) {
-            (Dir::Down, (_, y_pos)) if y_pos > 0 => (rock.pos.0, rock.pos.1 - 1),
-            (Dir::Left, (x_pos, _)) if x_pos > 0 => (rock.pos.0 - 1, rock.pos.1),
-            (Dir::Right, (x_pos, _)) if x_pos + rock.width() < CHAMBER_WIDTH => (rock.pos.0 + 1, rock.pos.1),
-            _ => return false,
-        };
 
-        let old_pos = rock.pos;
-        rock.pos = new_pos;
-
-        if self.collides(rock) {
-            rock.pos = old_pos;
-            return false;
+    fn step(&self, rock: &mut Rock, dir: Dir) -> bool {
+        if let Some(positions) = self.determine_rock_pos(&rock, dir) {
+            rock.pos = positions;
         }
+        match self.determine_rock_pos(&rock, Dir::Down) {
+            Some(positions) => { 
+                rock.pos = positions;
+                true
+            },
+            None => false
+        }
+}
+}
 
-        return true;
-    }
-
-    fn snip(&mut self, n: usize) -> usize {
-        let snipped = n;
-        self.grid = self.grid.drain(n..).collect();
-        snipped
-    }
-
-    fn stop_rock(&mut self, rock: &Rock) {
-        for (y, row) in rock.shape.iter().enumerate().rev() {
-            for (x, brick) in row.iter().enumerate() {
-                if *brick {
-                    self[rock.pos(x, y)] = true;                              
-                }
+impl ToString for Chamber {
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+        for row in (0..self.height() + 1).rev() {
+            let mut row_repr = Vec::new();
+            for col in 0..self.width {
+                row_repr.push(if self.rocks.contains(&(row, col)) { '#' } else { '.' });
             }
+            let _ = writeln!(s, "{}", row_repr.iter().collect::<String>());
         }
+        s
     }
 }
 
-fn start_next(chamber: &mut Chamber) -> Rock {
-    let mut rock = chamber.next().unwrap();
-    chamber.add_rows(&rock);
-    rock.pos.1 = chamber.grid.len() - 1; // set y coordinate
-    rock
-}
-
-impl Iterator for Chamber {
-    type Item = Rock ;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let idx = self.cur_shape;
-        self.cur_shape = (self.cur_shape + 1) % N_SHAPES;
-        Some((&SHAPE_ORDER[idx]).into())
-    }
-}
-
-impl Index<(usize, usize)> for Chamber {
-    type Output= bool;
-    
-    fn index(&self, idx: (usize, usize)) -> &Self::Output {
-        &self.grid[idx.1][idx.0]
-    }
-}
-
-impl IndexMut<(usize, usize)> for Chamber {
-    fn index_mut(&mut self, idx: (usize, usize)) -> &mut Self::Output {
-        &mut self.grid[idx.1][idx.0]
-    }
-}
-
-impl Display for Chamber {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, row) in self.grid.iter().enumerate().rev() {
-            let _ = writeln!(f, "|{}|{}", row.iter().map(|b| if *b { '#' } else { '.' }).collect::<String>(), i);
-        }
-        Ok(())
-    }
-}
-
+#[derive(Eq, PartialEq, Hash)]
 struct Rock {
-    pos: (usize, usize),
-    shape: Vec<Vec<bool>>,
+    shape: Shape,
+    pos: Vec<Pos>,
 }
 
-impl Rock {
-    fn height(&self) -> usize {
-       self.shape.len()
-    }
-    
-    fn width(&self) -> usize {
-        self.shape[0].len()
-    }
-
-    #[inline(always)]
-    fn pos(&self, x: usize, y: usize) -> (usize, usize) {
-        (self.pos.0 + x, self.pos.1 - y)
-    }
-}
-
-impl From<&Shape> for Rock {
-    fn from(shape: &Shape) -> Self {
-        Self { pos: (2, 0), shape: shape.to_vec() }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-enum Dir {
-    Down,
-    Left,
-    Right
-} 
-
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 enum Shape {
-    Line,
-    Cross,
+    Minus,
+    Plus,
     L,
-    Stick,
-    Block
+    I,
+    Quadrat,
 }
 
 impl Shape {
-    fn to_vec(&self) -> Vec<Vec<bool>> {
-        match self {
-            Shape::Line => shape_to_vec(LINE),
-            Shape::Cross => shape_to_vec(CROSS),
-            Shape::L => shape_to_vec(L),
-            Shape::Stick => shape_to_vec(STICK),
-            Shape::Block => shape_to_vec(BLOCK),
-        }
+    fn spawn_rock(self, height: isize) -> Rock {
+        let mut pos = match self {
+            Self::Minus => MINUS.to_vec(),
+            Self::Plus => PLUS.to_vec(),
+            Self::L => L.to_vec(),
+            Self::I => I.to_vec(),
+            Self::Quadrat => QUADRAT.to_vec(),
+        };
+        pos.iter_mut().for_each(|(row, _)| *row += height + MIN_DIST);
+        Rock { shape: self, pos }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Dir {
+    Down,
+    Left,
+    Right,
+}
+
+impl std::ops::Add<Pos> for Dir {
+    type Output = Pos;
+
+    fn add(self, other: Pos) -> Self::Output {
+        let dir = match self {
+            Self::Down => (-1, 0),
+            Self::Left => (0, -1),
+            Self::Right => (0, 1),
+        };
+        (other.0 + dir.0, other.1 + dir.1)
     }
 }
 
 fn parse(input: &str) -> Vec<Dir> {
-    input.chars().map(|c| if c == '>' { Dir::Right } else { Dir::Left} ).collect()
+    input.chars().map(|c| if c == '<' { Dir::Left } else { Dir::Right }).collect()
 }
 
-fn run(dirs: Vec<Dir>) -> usize {
+fn shapes() -> Vec<Shape> {
+    vec![Shape::Minus, Shape::Plus, Shape::L, Shape::I, Shape::Quadrat]
+} 
+
+fn determine_repeat_interval(dirs: &[Dir]) -> ((isize, isize), (isize, isize)) {
     let mut chamber = Chamber::new();
-    let mut rock = start_next(&mut chamber);
-    let mut c = 0_usize;
-    let mut h = 0;
-    for dir in dirs.into_iter().cycle() {
-        chamber.move_rock(&mut rock, dir);
-        if !chamber.move_rock(&mut rock, Dir::Down) {
-            chamber.stop_rock(&rock);
-            c += 1;
-            if c == 2022 {
-                // println!("{}", chamber);
-                return chamber.height() - chamber.get_highest() + h;
+    let mut shapes = shapes().into_iter().cycle();
+    let mut rocks = HashMap::new();
+    let mut rock = shapes.next().unwrap().spawn_rock(chamber.height());
+    let mut n_blocks = 0;
+
+    for (i, dir) in dirs.into_iter().enumerate().cycle() {
+        if !chamber.step(&mut rock, *dir) {
+            if let Some((blocks_init, height_init)) = rocks.insert((rock.shape, rock.pos[0].1, i), (n_blocks, chamber.height())) {
+                return (
+                    (blocks_init, height_init), 
+                    (n_blocks - blocks_init, chamber.height() - height_init)
+                );
             }
-            if chamber.height() >= 500 {
-                h += chamber.snip(400);
-            }
-            rock = start_next(&mut chamber);
-        }        
+            rock.pos.iter().for_each(|pos| assert!(chamber.rocks.insert(*pos)));
+            n_blocks += 1;
+            rock = shapes.next().unwrap().spawn_rock(chamber.height()); 
+        }
     }
     unreachable!();
 }
 
-fn build_n_blocks(n: usize, dirs: Vec<Dir>, blocks_rem: usize) -> Chamber {
+fn build_n_blocks(n: isize, dirs: &[Dir]) -> isize {
+    if n == 0 {
+        return 0;
+    }
     let mut chamber = Chamber::new();
-    let mut rock = start_next(&mut chamber);
     let mut n_blocks = 0;
-    let height_init = 158;
-    let height_repeat = 2781 - 158;
-    let mut blocks_init = 0;
-    let mut blocks_repeat = 0;
-    // let mut blocks_rem = 102;
+    let mut shapes = shapes().into_iter().cycle();
+    let mut rock = shapes.next().unwrap().spawn_rock(chamber.height());
 
     for dir in dirs.iter().cycle() {
-        chamber.move_rock(&mut rock, *dir);
-        if !chamber.move_rock(&mut rock, Dir::Down) {
-            chamber.stop_rock(&rock);
+        if !chamber.step(&mut rock, *dir) {
+            rock.pos.iter().for_each(|pos| assert!(chamber.rocks.insert(*pos)));
             n_blocks += 1;
             if n_blocks == n {
-                return chamber;
+                return chamber.height();
             }
-            if chamber.highest_rock() == height_init {
-                blocks_init = n_blocks;
-                println!("blocks_init: {}", blocks_init);
-            }
-
-            if chamber.highest_rock() == height_repeat + height_init {
-                blocks_repeat = n_blocks - blocks_init;
-                println!("blocks_repeat:{}", blocks_repeat);
-
-            }
-
-            if n_blocks == blocks_init + blocks_rem {
-                println!("height_rem: {}", chamber.highest_rock() - height_init);
-                
-            }
-            rock = start_next(&mut chamber);
-        }
-    }
-    unreachable!();
-}
-
-// (rocks_init, rocks_repeat)
-fn build_until_repeat(dirs: Vec<Dir>) -> (usize, usize) {
-    let mut chamber = Chamber::new();
-    let mut rock = start_next(&mut chamber);
-    let mut map = HashMap::new();
-    let mut n_rocks = 0;
-
-    for (i, dir) in dirs.iter().enumerate().cycle() {
-        // move in dir
-        chamber.move_rock(&mut rock, *dir);
-        // move down and check for stop
-        if !chamber.move_rock(&mut rock, Dir::Down) {
-            chamber.stop_rock(&rock);
-            let idx = (chamber.cur_shape + N_SHAPES - 1) % N_SHAPES;
-            if let Some(n_rocks_prev) = map.insert((idx, i, rock.pos.0), n_rocks) {
-                return (n_rocks_prev, n_rocks);
-            }
-            n_rocks += 1;
-            rock = start_next(&mut chamber);
+            rock = shapes.next().unwrap().spawn_rock(chamber.height()); 
         }
     }
 
     unreachable!();
 }
 
-fn shape_to_vec<S, I, T>(shape: S) -> Vec<Vec<T>> 
-where S: IntoIterator<Item = I>,
-      I: IntoIterator<Item = T>,
-{
-    shape.into_iter().map(|inner| inner.into_iter().collect()).collect()
+fn height_after_n_blocks(n: isize, dirs: Vec<Dir>) -> isize {
+    let ((blocks_init, height_init), (blocks_repeat, height_repeat)) = determine_repeat_interval(&dirs);
+    let (blocks_rem, cur_height) = match n.cmp(&(blocks_init)) {
+        std::cmp::Ordering::Less => (n, 0),
+        std::cmp::Ordering::Equal => return height_init,
+        std::cmp::Ordering::Greater => {
+            let cur_height = (n - blocks_init) / blocks_repeat * height_repeat + height_init;
+            let blocks_rem = (n - blocks_init) % blocks_repeat;
+            (blocks_rem, cur_height)
+        },
+    };
+    return build_n_blocks(blocks_rem + blocks_init, &dirs) - height_init + cur_height;
 }
 
-pub fn get_solution_1() -> usize {
-    let dirs = parse(_TEST);
-    let h = run(dirs);
-    h
+pub fn get_solution_1() -> isize {
+    height_after_n_blocks(2022, parse(INPUT))
 }
 
-pub fn get_solution_2() -> usize {
-    let n = 1_000_000_000_000;
-    let height_init = 158;
-    let height_repeat = 2781 - 158; 
-    let height_rem = 160;
-    let blocks_init = 98;
-    let blocks_repeat = 1700;
-    let _blocks_rem: usize = (n - blocks_init) % blocks_repeat;
-    height_init + n / blocks_repeat * height_repeat + height_rem
-}
-
-#[test]
-fn test_run() {
-    let dirs = parse(INPUT);
-    let _ = build_until_repeat(dirs);
+pub fn get_solution_2() -> isize {
+    height_after_n_blocks(1_000_000_000_000, parse(INPUT))
 }
