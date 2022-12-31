@@ -176,6 +176,14 @@ fn main() {
     println!("Day 18.2\t{}us\t{}", start.elapsed().as_micros(), result);
     
     let start = Instant::now();
+    let result = d19::get_solution_1();
+    println!("Day 19.1\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
+    let result = d19::get_solution_2();
+    println!("Day 19.2\t{}us\t{}", start.elapsed().as_micros(), result);
+
+    let start = Instant::now();
     let result = d20::get_solution_1();
     println!("Day 20.1\t{}us\t{}", start.elapsed().as_micros(), result);
 
