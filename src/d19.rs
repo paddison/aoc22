@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 // initial algorithm:
 // for each step, build the best bot that can be build right now, or wait.
@@ -86,6 +86,10 @@ impl State {
                 Robot::Geode => self.r_geode += 1, 
             }
     }
+
+    fn can_reach_cur_max(&self, max: &u32) -> bool {
+        self.rem_steps * self.r_geode + self.geode + self.rem_steps * (self.rem_steps + 1) / 2 > *max
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -113,43 +117,65 @@ fn parse(input: &str) -> Vec<BluePrint> {
 }
 
 fn run(mut state: State, bp: BluePrint, max: &mut u32, visited: &mut HashSet<State>) {
-    if !visited.insert(state) {
-        return;
-    }
-
-    let next = state.get_available_robots(&bp);
-
-    state.update_resources();
-    state.optimize_resources(&bp);
-
-    if state.rem_steps == 1 {
+    if state.rem_steps == 0 {
         if state.geode > *max {
             *max = state.geode;
         }
         return;
     }
 
+    if !visited.insert(state) {
+        return;
+    }
+
+    if !state.can_reach_cur_max(max) {
+        return;
+    }
+
+    let next = state.get_available_robots(&bp);
+
+    state.optimize_resources(&bp);
+    state.update_resources();
     state.rem_steps -= 1;
     
-    run(state, bp, max, visited);
-
-    for (robot, cost) in next.into_iter().rev() {
+    for (robot, cost) in next.into_iter() {
         let mut new_s = state;
         new_s.build_robot((robot, cost));
         run(new_s, bp, max, visited);
     }
+    run(state, bp, max, visited);
 }
 
 pub fn get_solution_1() -> usize {
-    let bps = parse(INPUT);
+    let bps = Arc::new(parse(INPUT));
     let mut quality_levels = Vec::new();
-    for (id, bp) in bps.iter().enumerate() {
-        let state = State::new(24);
-        let mut max = 0;
-        run(state, *bp, &mut max, &mut HashSet::new());
-        quality_levels.push((id + 1) * max as usize);
+    let n_threads = 4;
+    let chunk_size = bps.len() / n_threads;
+    let mut handles = Vec::new();
 
+    for i in 0..n_threads {
+        let t_bps = Arc::clone(&bps);
+        let start = i * chunk_size;
+        let end = if i == n_threads - 1 { bps.len() } else { i * chunk_size + chunk_size };
+
+        let handle = std::thread::spawn(move || {
+            let mut t_quality_levels = Vec::new();
+            for (id, bp) in t_bps[start..end].iter().enumerate() {
+                let mut max = 0;
+                let state = State::new(24);
+                run(state, *bp, &mut max, &mut HashSet::new());
+                t_quality_levels.push((id + i * chunk_size + 1) * max as usize);
+            }
+            return t_quality_levels;
+        });
+
+        handles.push(handle);
     }
+
+    for handle in handles {
+        quality_levels.append(&mut handle.join().unwrap());
+    }
+
     quality_levels.iter().sum::<usize>()
 }
 
