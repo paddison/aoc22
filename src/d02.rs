@@ -33,17 +33,17 @@ impl Shape {
     fn score_2(player: Self, elf: Self) -> usize {
         match elf {
             Self::Rock => match player {
-                Self::Rock => 3 + 0,        // play scissor
+                Self::Rock => 3,        // play scissor
                 Self::Paper => 1 + 3,       // play rock
                 Self::Scissors => 2 + 6,    // play paper
             },
             Self::Paper => match player {
-                Self::Rock => 1 + 0,        // play rock
+                Self::Rock => 1,        // play rock
                 Self::Paper => 2 + 3,       // play paper
                 Self::Scissors => 3 + 6,    // play scissor
             },
             Self::Scissors => match player {
-                Self::Rock => 2 + 0,        // play paper
+                Self::Rock => 2,        // play paper
                 Self::Paper => 3 + 3,       // play scissors
                 Self::Scissors => 1 + 6,    // play rock
             },

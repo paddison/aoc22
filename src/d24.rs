@@ -47,7 +47,7 @@ impl Wind {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash)]
+#[derive(Debug, Clone, Copy)]
 struct State {
     player: (usize, usize),
     goal: (usize, usize),
@@ -59,6 +59,13 @@ struct State {
 impl PartialEq for State {
     fn eq(&self, other: &Self) -> bool {
         self.player == other.player && self.steps == other.steps
+    }
+}
+
+impl std::hash::Hash for State {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.player.hash(state);
+        self.steps.hash(state);
     }
 }
 
@@ -118,7 +125,7 @@ impl State {
     fn filter_moves(moves: &[(usize, usize)], winds: &[Wind]) -> Vec<(usize, usize)> {
         let mut filtered_moves = Vec::new();
         for new_pos in moves {
-            if winds.iter().find(|w| &w.pos == new_pos).is_none() {
+            if !winds.iter().any(|w| &w.pos == new_pos) {
                 filtered_moves.push(*new_pos);
             }
         }

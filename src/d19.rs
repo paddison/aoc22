@@ -166,7 +166,7 @@ pub fn get_solution_1() -> usize {
                 run(state, *bp, &mut max, &mut HashSet::new());
                 t_quality_levels.push((id + i * chunk_size + 1) * max as usize);
             }
-            return t_quality_levels;
+            t_quality_levels
         });
 
         handles.push(handle);
@@ -182,13 +182,12 @@ pub fn get_solution_1() -> usize {
 pub fn get_solution_2() -> u32 {
     let bps = parse(INPUT);
     let mut handles = Vec::new();
-    for id in 0..3 {
+    for bp in bps.into_iter().take(3) {
         let state = State::new(32);
         let mut max = 0;
-        let bp = bps[id];
         let handle = std::thread::spawn(move || {
             run(state, bp, &mut max, &mut HashSet::new());
-            return max;
+            max  
         });
         handles.push(handle);
     }

@@ -26,7 +26,7 @@ fn parse_stacks(input: &str) -> Vec<Vec<char>> {
     stacks
 }
 
-fn execute_instruction_9000((amount, from, to): (usize, usize, usize), crates: &mut Vec<Vec<char>>) {
+fn execute_instruction_9000((amount, from, to): (usize, usize, usize), crates: &mut [Vec<char>]) {
     for _ in 0..amount {
         if let Some(c) = crates[from].pop() {
             crates[to].push(c)
@@ -34,7 +34,7 @@ fn execute_instruction_9000((amount, from, to): (usize, usize, usize), crates: &
     }
 }
 
-fn execute_instruction_9001((amount, from, to): (usize, usize, usize), crates: &mut Vec<Vec<char>>) {
+fn execute_instruction_9001((amount, from, to): (usize, usize, usize), crates: &mut [Vec<char>]) {
     let mut moved_crates = Vec::new();
     for _ in 0..amount {
         if let Some(c) = crates[from].pop() {

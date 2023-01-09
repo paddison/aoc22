@@ -25,7 +25,7 @@ fn shift(nums: &mut Vec<(i64, usize)>, idx: usize) {
 	}
 }
 
-fn determine_idx(nums: &mut Vec<(i64, usize)>, pos: usize) -> usize {
+fn determine_idx(nums: &mut [(i64, usize)], pos: usize) -> usize {
     nums.iter().position(|(_, p)| pos == *p).unwrap()
 }
 
@@ -61,12 +61,12 @@ fn decrypt(nums: &mut Vec<(i64, usize)>) {
 pub fn get_solution_1() -> i64 {
     let mut nums = parse(INPUT);
     mix_file(&mut nums);
-    coordinates(&mut nums)
+    coordinates(&nums)
 }        
                         
 pub fn get_solution_2() -> i64 {
     let mut nums = parse(INPUT);
     add_key(&mut nums, KEY);
     decrypt(&mut nums);
-    coordinates(&mut nums)
+    coordinates(&nums)
 }

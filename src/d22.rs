@@ -65,7 +65,10 @@ fn parse_cube(input: &str) -> (Cube, Vec<Instr>) {
     (Cube { sides, positions, adj_sides, player: Player { pos: (0, 0), facing: 1 }, cur_side: 0 }, parse_instructions(input.lines().last().unwrap()))
 }
 
-fn parse_cube_sides(cube_raw: &Vec<Vec<char>>) -> ([Vec<Vec<Tile>>; 6], [(usize, usize); 6]) {
+type CubeSides =[Vec<Vec<Tile>>; 6];
+type CubePositions = [(usize, usize); 6]; 
+
+fn parse_cube_sides(cube_raw: &Vec<Vec<char>>) -> (CubeSides, CubePositions) {
     const EMPTY_V: Vec<Vec<Tile>> = Vec::new();
     let height = cube_raw.len();
     let width = cube_raw.iter().max_by(|a, b| a.len().cmp(&b.len())).unwrap().len();
@@ -79,8 +82,7 @@ fn parse_cube_sides(cube_raw: &Vec<Vec<char>>) -> ([Vec<Vec<Tile>>; 6], [(usize,
             let row_start = row * side_len;
             let col_start = col * side_len;
             if let Some(true) = cube_raw.get(row_start)
-                                        .map(|row| row.get(col_start).map(|tile| !tile.is_whitespace()))
-                                        .flatten() {
+                                        .and_then(|row| row.get(col_start).map(|tile| !tile.is_whitespace())) {
                 sides[side] = cube_raw[row_start..row_start + side_len]
                     .iter()
                     .map(|row| row.iter().skip(col_start).take(side_len)
@@ -197,9 +199,9 @@ impl Maze {
     }
 
     fn calc_new_pos<F: Fn(&Maze, isize, (usize, usize)) -> (usize, usize )>(&mut self, steps: isize, mov: F) -> Option<(usize, usize)> {
-        let mut new_pos = mov(&self, steps, self.player.pos);
+        let mut new_pos = mov(self, steps, self.player.pos);
         while self[new_pos] == Tile::None {
-            new_pos = mov(&self, steps, new_pos)
+            new_pos = mov(self, steps, new_pos)
         }
         if self[new_pos] == Tile::Floor {
             Some(new_pos)
@@ -315,10 +317,7 @@ trait Dir {
 
 impl Dir for u8 {
     fn is_opposite(&self, other: Self) -> bool {
-        match (self, other) {
-            (0, 2) | (2, 0) | (1, 3) | (3, 1) => true,
-            _ => false,
-        }
+        matches!((self, other), (0, 2) | (2, 0) | (1, 3) | (3, 1))
     }
 
     fn adjust_side(&self, side_len: usize, pos: (usize, usize)) -> (usize, usize) {
@@ -375,8 +374,8 @@ fn execute_all(instructions: Vec<Instr>, maze: &mut Maze) -> (usize, usize, usiz
 
 #[derive(Debug)]
 struct Cube {
-    sides: [Vec<Vec<Tile>>; 6],
-    positions: [(usize, usize); 6],
+    sides: CubeSides,
+    positions: CubePositions,
     adj_sides: HashMap<(usize, u8), (usize, u8)>,
     player: Player,
     cur_side: usize,

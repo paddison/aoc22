@@ -49,7 +49,7 @@ fn flow(cubes: &HashSet<Cube>) -> u64 {
         neighbours(&next).iter()
         .filter(|n| ranges.0.contains(&n.0) && ranges.1.contains(&n.1) && ranges.2.contains(&n.2))
         .for_each(|n| {
-            if cubes.contains(&n) {
+            if cubes.contains(n) {
                 surface += 1;
             } else {
                 frontier.push(*n);

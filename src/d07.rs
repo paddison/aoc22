@@ -25,7 +25,7 @@ fn add_dir(inputs: &Vec<Vec<&'static str>>, cursor: &mut usize) -> Dir {
     dir
 }
 
-fn add_files(inputs: &Vec<Vec<&'static str>>, dir: &mut Dir, cursor: &mut usize) {
+fn add_files(inputs: &[Vec<&'static str>], dir: &mut Dir, cursor: &mut usize) {
     while let Some(cmd) = inputs.get(*cursor) {
         match cmd[0] {
             "$" => break,
@@ -57,7 +57,7 @@ impl Display for File {
 #[derive(Debug)]
 struct Dir {
     _name: &'static str,
-    dirs: Vec<Box<Dir>>,
+    dirs: Vec<Dir>,
     files: Vec<File>,
 }
 
@@ -67,7 +67,7 @@ impl Dir {
     }
 
     fn add_dir(&mut self, dir: Dir) {
-        self.dirs.push(Box::new(dir));
+        self.dirs.push(dir);
     }
 
     fn add_file(&mut self, file: File) {
@@ -160,7 +160,7 @@ fn _parse_hash_map(input: &'static str) -> _FileSystem {
     fs
 }
 
-fn _get_sizes<'file>(fs: &'file _FileSystem) -> HashMap<&'file PathBuf, usize> {
+fn _get_sizes<>(fs: &_FileSystem) -> HashMap<&PathBuf, usize> {
     let mut sizes = HashMap::new();
     for k in fs.keys() {
         if !sizes.contains_key(k) {

@@ -64,13 +64,13 @@ fn determine_positions(elves: &HashSet<Pos>, moves: &[[Pos; 3]]) -> (HashMap<Pos
     let mut proposed_moves = HashMap::new();
     let mut not_moved_count = 0;
     for elf in elves {
-        let new_pos = if can_stay(*elf, &elves) {
+        let new_pos = if can_stay(*elf, elves) {
             not_moved_count += 1;
             *elf
         } else {
             let mut new_pos = None;
             for dirs in moves {
-                if check_dir(*elf, &elves, dirs) {
+                if check_dir(*elf, elves, dirs) {
                     new_pos = Some(elf.c_add(dirs[0]));
                     break;
                 }
@@ -98,10 +98,10 @@ fn execute_moves(proposed_moves: HashMap<Pos, Vec<Pos>>) -> HashSet<Pos> {
 }
 
 fn determine_grid_size(elves: &HashSet<Pos>) -> (Pos, Pos) {
-    let left = elves.iter().min_by(|(x1, _), (x2, _)| x1.cmp(&x2)).unwrap().0;
-    let right = elves.iter().max_by(|(x1, _), (x2, _)| x1.cmp(&x2)).unwrap().0 + 1;
-    let bottom = elves.iter().min_by(|(_, y1), (_, y2)| y1.cmp(&y2)).unwrap().1;
-    let top = elves.iter().max_by(|(_, y1), (_, y2)| y1.cmp(&y2)).unwrap().1 + 1;
+    let left = elves.iter().min_by(|(x1, _), (x2, _)| x1.cmp(x2)).unwrap().0;
+    let right = elves.iter().max_by(|(x1, _), (x2, _)| x1.cmp(x2)).unwrap().0 + 1;
+    let bottom = elves.iter().min_by(|(_, y1), (_, y2)| y1.cmp(y2)).unwrap().1;
+    let top = elves.iter().max_by(|(_, y1), (_, y2)| y1.cmp(y2)).unwrap().1 + 1;
 
     ((left, right), (bottom, top))
 }
@@ -141,7 +141,7 @@ fn move_elves_p2(mut elves: HashSet<Pos>) -> u64 {
         [W, NW, SW],
         [E, NE, SE],
     ];
-    let mut none_moved = false;
+    let mut none_moved;
     for i in 1.. {
         (elves, none_moved) = do_round(elves, &moves);
         if none_moved {
@@ -153,7 +153,7 @@ fn move_elves_p2(mut elves: HashSet<Pos>) -> u64 {
     unreachable!();
 }
 
-fn print_grid(elves: &HashSet<Pos>) {
+fn _print_grid(elves: &HashSet<Pos>) {
     let mut grid = Vec::new();
     let (width, height) = determine_grid_size(elves);
     for _ in height.0..height.1 {

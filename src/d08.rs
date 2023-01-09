@@ -27,7 +27,7 @@ impl _Grid4Bit {
         }
         let (vec_idx, n_idx) = self._actual_idx(x, y);
         let n = self.trees[vec_idx];
-        Some(n >> _USIZE_WIDTH - (n_idx + 1) * 4 & _SHIFT_MASK)
+        Some(n >> (_USIZE_WIDTH - (n_idx + 1) * 4) & _SHIFT_MASK)
     }
 
     fn _actual_idx(&self, x: usize, y: usize) -> (usize, usize) {

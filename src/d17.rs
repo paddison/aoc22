@@ -33,7 +33,7 @@ impl Chamber {
         let shape = rock.pos.iter().map(|pos| dir + *pos).collect::<Vec<Pos>>();
         for pos in &shape {
             // collision with wall, floor or other rocks
-            if pos.1 < 0 || pos.1 >= self.width || pos.0 < 0 || self.rocks.contains(&pos) {
+            if pos.1 < 0 || pos.1 >= self.width || pos.0 < 0 || self.rocks.contains(pos) {
                 return None;
             }
         }
@@ -41,10 +41,10 @@ impl Chamber {
     }
 
     fn step(&self, rock: &mut Rock, dir: Dir) -> bool {
-        if let Some(positions) = self.determine_rock_pos(&rock, dir) {
+        if let Some(positions) = self.determine_rock_pos(rock, dir) {
             rock.pos = positions;
         }
-        match self.determine_rock_pos(&rock, Dir::Down) {
+        match self.determine_rock_pos(rock, Dir::Down) {
             Some(positions) => { 
                 rock.pos = positions;
                 true
@@ -132,7 +132,7 @@ fn determine_repeat_interval(dirs: &[Dir]) -> ((isize, isize), (isize, isize)) {
     let mut rock = shapes.next().unwrap().spawn_rock(chamber.height());
     let mut n_blocks = 0;
 
-    for (i, dir) in dirs.into_iter().enumerate().cycle() {
+    for (i, dir) in dirs.iter().enumerate().cycle() {
         if chamber.step(&mut rock, *dir) {
             continue; 
         }
@@ -185,7 +185,7 @@ fn height_after_n_blocks(n: isize, dirs: Vec<Dir>) -> isize {
             (blocks_rem, cur_height)
         },
     };
-    return build_n_blocks(blocks_rem + blocks_init, &dirs) - height_init + cur_height;
+    build_n_blocks(blocks_rem + blocks_init, &dirs) - height_init + cur_height
 }
 
 pub fn get_solution_1() -> isize {

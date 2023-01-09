@@ -3,7 +3,7 @@ fn parse(input: &str) -> Vec<usize> {
     let mut elf = Vec::new();
     
     for line in input.lines() {
-        if line.len() == 0 {
+        if line.is_empty() {
             elves.push(elf.iter().sum::<usize>());
             elf = Vec::new();
         } else {
@@ -11,7 +11,7 @@ fn parse(input: &str) -> Vec<usize> {
         }
     }
 
-    elves.sort_by(|a, b| a.cmp(&b).reverse());
+    elves.sort_by(|a, b| a.cmp(b).reverse());
     elves
 } 
 

@@ -62,5 +62,5 @@ fn to_snafu(mut n_base_5: Vec<u32>) -> String {
 }
 
 pub fn get_solution_1() -> String {
-    to_snafu(to_base_5(parse(INPUT).into_iter().map(|snafu| to_dec(snafu)).sum()))
+    to_snafu(to_base_5(parse(INPUT).into_iter().map(to_dec).sum()))
 }

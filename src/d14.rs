@@ -60,7 +60,7 @@ impl Cave {
                 let x_range = *left_x.min(right_x)..(*left_x.max(right_x) + 1);
                 let y_range = *left_y.min(right_y)..(*left_y.max(right_y) + 1);
                 for x in x_range {
-                    for y in y_range.clone().into_iter() {
+                    for y in y_range.clone() {
                         coords[y][x] = true;
                     }
                 }

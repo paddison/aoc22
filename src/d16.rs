@@ -74,7 +74,7 @@ impl ValveTable {
             opened_human >>= 1;
             opened_elephant >>= 1;
         }
-        return true;
+        true
     }
 }
 

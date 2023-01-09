@@ -24,7 +24,7 @@ impl Packet {
         use self::Packet::*;
 
         match (lhs, rhs) {
-            (Value(low), Value(high)) => low.cmp(&high),
+            (Value(low), Value(high)) => low.cmp(high),
             (Value(low), rhs) => Self::compare(&List(vec![Value(*low)]), rhs),
             (lhs, Value(high)) => Self::compare(lhs, &List(vec![Value(*high)])),
             (List(l), List(r)) => {
@@ -143,6 +143,6 @@ pub fn get_solution_1() -> usize {
 pub fn get_solution_2() -> usize {
     let mut packets = flatten_pairs(parse(INPUT));
     add_divider_packets(&mut packets);
-    packets.sort_by(|lhs, rhs| Packet::compare(lhs, rhs));
+    packets.sort_by(Packet::compare);
     get_divider_indices(&packets).into_iter().product()
 }
