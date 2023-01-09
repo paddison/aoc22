@@ -133,18 +133,19 @@ fn determine_repeat_interval(dirs: &[Dir]) -> ((isize, isize), (isize, isize)) {
     let mut n_blocks = 0;
 
     for (i, dir) in dirs.into_iter().enumerate().cycle() {
-        if !chamber.step(&mut rock, *dir) {
-            if let Some((blocks_init, height_init)) = rocks.insert((rock.shape, rock.pos[0].1, i), (n_blocks, chamber.height())) {
-                return (
-                    (blocks_init, height_init), 
-                    (n_blocks - blocks_init, chamber.height() - height_init)
-                );
-            }
-            rock.pos.iter().for_each(|pos| assert!(chamber.rocks.insert(*pos)));
-            n_blocks += 1;
-            rock = shapes.next().unwrap().spawn_rock(chamber.height()); 
+        if chamber.step(&mut rock, *dir) {
+            continue; 
         }
+
+        if let Some((blocks_init, height_init)) = rocks.insert((rock.shape, rock.pos[0].1, i), (n_blocks, chamber.height())) {
+            return ((blocks_init, height_init), (n_blocks - blocks_init, chamber.height() - height_init));
+        }
+
+        rock.pos.iter().for_each(|pos| assert!(chamber.rocks.insert(*pos)));
+        n_blocks += 1;
+        rock = shapes.next().unwrap().spawn_rock(chamber.height()); 
     }
+    
     unreachable!();
 }
 
@@ -158,14 +159,16 @@ fn build_n_blocks(n: isize, dirs: &[Dir]) -> isize {
     let mut rock = shapes.next().unwrap().spawn_rock(chamber.height());
 
     for dir in dirs.iter().cycle() {
-        if !chamber.step(&mut rock, *dir) {
-            rock.pos.iter().for_each(|pos| assert!(chamber.rocks.insert(*pos)));
-            n_blocks += 1;
-            if n_blocks == n {
-                return chamber.height();
-            }
-            rock = shapes.next().unwrap().spawn_rock(chamber.height()); 
+        if chamber.step(&mut rock, *dir) { 
+            continue; 
+        } 
+        
+        rock.pos.iter().for_each(|pos| assert!(chamber.rocks.insert(*pos)));
+        n_blocks += 1;
+        if n_blocks == n {
+            return chamber.height();
         }
+        rock = shapes.next().unwrap().spawn_rock(chamber.height()); 
     }
 
     unreachable!();

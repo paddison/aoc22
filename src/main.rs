@@ -119,13 +119,13 @@ fn main() {
     let result = d11::get_solution_2();
     println!("Day 11.2\t{}us\t{}", start.elapsed().as_micros(), result);
     
-    // let start = Instant::now();
-    // let result = d12::get_solution_1();
-    // println!("Day 12.1\t{}us\t{}", start.elapsed().as_micros(), result);
+    let start = Instant::now();
+    let result = d12::get_solution_1();
+    println!("Day 12.1\t{}us\t{}", start.elapsed().as_micros(), result);
     
-    // let start = Instant::now();
-    // let result = d12::get_solution_2();
-    // println!("Day 12.2\t{}us\t{}", start.elapsed().as_micros(), result);
+    let start = Instant::now();
+    let result = d12::get_solution_2();
+    println!("Day 12.2\t{}us\t{}", start.elapsed().as_micros(), result);
     
     let start = Instant::now();
     let result = d13::get_solution_1();

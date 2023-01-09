@@ -1,181 +1,235 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, BinaryHeap, HashSet};
 
-type Valves = HashMap<&'static str, Valve>;
+type Valves = HashMap<&'static str, (u32, Vec<&'static str>)>;
+type ValveDistances =  HashMap<(&'static str, &'static str), u32>;
 
 static INPUT: &str = include_str!("../data/d16.txt");
 static _TEST: &str = include_str!("../data/d16_test.txt"); 
 
-#[derive(Hash, PartialEq, Eq, Clone)]
-struct Valve {
-    rate: u64,
-    is_closed: bool,
-    neighbours: Vec<&'static str>,
-}
-
-fn parse(input: &'static str) -> Valves {
+fn parse(input: &'static str) -> (Valves, u64, ValveTable) {
     let mut valves = HashMap::new();
-    for parts in input.lines().map(|l| l.split_whitespace().collect::<Vec<&str>>()) {
-        match &parts[..] {
-            [_, id, _, _, rate, _, _, _, _, others @ ..] => {
-                let rate = rate.trim_matches(|c: char| !c.is_numeric()).parse().unwrap();
-                let neighbours = others.iter().map(|v| v.trim_matches(|c: char| !c.is_ascii_alphabetic())).collect();
-                let valve = Valve {
-                    rate,
-                    is_closed: rate != 0,
-                    neighbours
-                };
-                valves.insert(*id, valve);
+    let mut valve_table = Vec::new();
+    let opened = 0;
+    let mut mask = 1_u64; 
+    input.lines().for_each(|l| {
+        match &l.split_whitespace().collect::<Vec<&str>>()[..] {
+            [_, name, _, _, flow_rate, _, _, _, _, rest @..] => {
+                let flow_rate = flow_rate.trim_matches(|c: char| !c.is_numeric()).parse::<u32>().unwrap();
+                // valve is already open
+                if flow_rate != 0 {
+                    valve_table.push((*name, mask));
+                    // opened |= mask;
+                    mask <<= 1;
+                }
+                valves.insert(*name, (flow_rate, rest.iter().map(|v| v.trim_matches(',')).collect()));
             },
-            _ => unreachable!()
+            _ => unreachable!(),
+        }
+    });
+
+    (valves, opened, ValveTable::new(valve_table))
+}
+
+struct ValveTable {
+    _inner: Vec<(&'static str, u64)>,
+    len: usize,
+}
+
+impl ValveTable {
+    fn new(entries: Vec<(&'static str, u64)>) -> Self {
+        let len = entries.len();
+        Self { _inner: entries, len }
+    }
+
+    fn get_mask(&self, valve: &'static str) -> Option<u64> {
+        self._inner.iter().find(|(valve_entry, _)| *valve_entry == valve).map(|(_, mask)| *mask)
+    }
+
+    fn get_valve(&self, mask: u64) -> Option<&'static str> {
+        self._inner.iter().find(|(_, mask_entry)| *mask_entry == mask).map(|(valve, _)| *valve)
+    }
+
+    fn get_closed(&self, valves: u64) -> Vec<&'static str> {
+        let mut closed = Vec::new();
+        let mut mask = 1;
+        while mask < 2_u64.pow(self.len as u32) {
+            if valves & mask == 0 {
+                closed.push(self.get_valve(mask).unwrap());
+            }
+            mask <<= 1;
+        }
+
+        closed
+    }
+
+    fn all_open(&self, opened: u64) -> bool {
+        opened == 2_u64.pow(self.len as u32) - 1
+    }
+    
+    fn are_disjoint_valves(&self, mut opened_human: u64, mut opened_elephant: u64) -> bool {
+        while opened_human != 0 && opened_elephant != 0 {
+            if opened_human % 2 == 1 && opened_elephant % 2 == 1 {
+                return false;
+            }
+            opened_human >>= 1;
+            opened_elephant >>= 1;
+        }
+        return true;
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct State {
+    valve: &'static str,
+    opened: u64,
+    time: u32,
+    pressure: u32,
+}
+
+impl State {
+    fn new(valve: &'static str, time: u32, pressure: u32, opened: u64) -> Self {
+        Self { valve, time, pressure, opened }
+    }
+
+    fn open_valve(&mut self, valve: &'static str, valve_table: &ValveTable) {
+        let mask = valve_table.get_mask(valve).unwrap();
+        self.opened |= mask;
+    }
+}
+
+pub fn get_solution_1() -> u32 {
+    let (valves, opened, valve_table) = parse(INPUT);
+    let state = State::new("AA", 30, 0, opened);
+    let min_distances = minimum_distance_valves(&valves);
+    find_max(state, min_distances, &valves, &valve_table)
+}
+
+pub fn get_solution_2() -> u32 {
+    let (valves, opened, valve_table) = parse(INPUT);
+    let min_distances = minimum_distance_valves(&valves);
+    let all_states = record_all_states(State::new("AA", 26, 0, opened), min_distances, &valves, &valve_table);
+    get_best_combination(all_states, &valve_table)
+}
+
+#[derive(Eq, PartialEq, Hash)]
+struct Node {
+    cost: u32,
+    name: &'static str,
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.cost.cmp(&other.cost).reverse()
+    }
+}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.cost.partial_cmp(&other.cost).map(|ordering| ordering.reverse())
+    }
+}
+
+fn shortest_path(from: &'static str, to: &'static str, valves: &Valves) -> u32 {
+    let mut queue = BinaryHeap::new();
+    let mut visited = HashSet::new();
+    let node = Node { cost: 0, name: from };
+    queue.push(node);
+    while let Some(Node { cost, name }) = queue.pop() {
+        if name == to {
+            return cost;
+        }
+        if !visited.insert(name) {
+            continue;
+        }
+        for neighbour in &valves.get(name).unwrap().1 {
+            let neighbour_node = Node { cost: cost + 1, name: neighbour };
+            queue.push(neighbour_node);
         }
     }
-    valves
+    u32::MAX
 }
 
-fn open_valve(id: &str, mut valves: Valves) -> Valves {
-    let valve = valves.get_mut(id).unwrap();
-    valve.is_closed = false;
-    valves 
-}
-
-#[inline(always)]
-fn is_done(time_left: u64, valves: &Valves) -> bool {
-    time_left == 0 || valves.values().all(|v| !v.is_closed)
-}
-
-fn do_step(cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, u64), u64>) {
-    if is_done(time_left, valves){
-        if score > *max {
-            *max = score;
-        }
-        return;
-    }
-    // check if we open valve
-    let v = valves.get(&cur).unwrap();
-    try_open_valve(v, cur, time_left - 1, valves, score, max, states);
-
-    for n in &v.neighbours {
-        // only continue, if we reached the same node before with less time left
-        let best_time_left = states.entry((n, score)).or_insert(0);
-        if *best_time_left < time_left {
-            *best_time_left = time_left;
-            do_step(n, time_left - 1, valves, score, max, states);
+fn minimum_distance_valves(valves: &Valves) -> ValveDistances {
+    let mut valve_distances = HashMap::new();
+    let pressure_valves = valves.iter().filter_map(|(valve, (pressure, _))| 
+        if pressure >= &0 { 
+            Some(*valve) 
+        } else { 
+            None }
+        ).collect::<Vec<&str>>();
+    
+    for from in &pressure_valves {
+        for to in &pressure_valves {
+            if from == to {
+                continue;
+            }
+            valve_distances.insert((*from, *to), shortest_path(from, to, valves));
         }
     }
+    valve_distances
 }
 
-fn try_open_valve(v: &Valve, cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, u64), u64>) {
-    if !v.is_closed {
-        return;
-    }
-    let new_score = score + v.rate * time_left;
-    let best_time_left = states.entry((cur, new_score)).or_insert(0);
-    if *best_time_left < time_left {
-        *best_time_left = time_left;
-        let new_valves = open_valve(cur, valves.clone());
-        do_step(cur, time_left, &new_valves, new_score, max, states)
-    }
-}
-
-fn do_step_eleph(cur: &'static str, e_cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, &str, u64), u64>) {
-    if is_done(time_left, valves) {
-        if score > *max {
-            *max = score;
+fn find_max(state: State, min_distances: ValveDistances, valves: &Valves, valve_table: &ValveTable) -> u32 {
+    let mut queue = vec![state];
+    let mut max = 0;
+    while let Some(State { valve, opened, time, pressure }) = queue.pop() {
+        if time == 0 || valve_table.all_open(opened) {
+            max = max.max(pressure);
+            continue; 
         }
-        return;
-    }
+        for closed in valve_table.get_closed(opened) {
+            // open valve + 1
+            let distance = min_distances.get(&(valve, closed)).unwrap();
+            if time < distance + 1 {
+                max = max.max(pressure);
+                continue;
+            }
+            let new_time = time - *distance - 1;
+            let new_pressure = valves.get(&closed).unwrap().0 * new_time + pressure;
+            let mut new_state = State::new(closed, new_time, new_pressure, opened);
 
-    let (v, e_v) = (valves.get(&cur).unwrap(), valves.get(&e_cur).unwrap());
-    if v.is_closed && e_v.is_closed && cur != e_cur {
-        open_both(cur, e_cur, time_left - 1, valves, score, max, states)
+            new_state.open_valve(closed, valve_table);
+            queue.push(new_state);
+        }
     }
-
-    if v.is_closed {
-        open_player(cur, e_cur, time_left - 1, valves, score, max, states)
-    }
-
-    if e_v.is_closed && cur != e_cur {
-        open_eleph(cur, e_cur, time_left - 1, valves, score, max, states)
-    }
-
-    go_to_next(cur, e_cur, time_left - 1, valves, score, max, states)
+    
+    max 
 }
 
-fn go_to_next(cur: &'static str, e_cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, &str, u64), u64>) {
-    let (v, e_v) = (valves.get(&cur).unwrap(), valves.get(&e_cur).unwrap());
-    for n in &v.neighbours {
-        for e_n in &e_v.neighbours {
-            let best_time_left = states.entry((n, e_n, score)).or_insert(0);
-            if *best_time_left < time_left {
-                *best_time_left = time_left;
-                do_step_eleph(n, e_n, time_left, valves, score, max, states)
+fn record_all_states(state: State, min_distances: ValveDistances, valves: &Valves, valve_table: &ValveTable) -> HashMap<u64, u32> { // (valves, pressure)
+    let mut all_states = HashMap::new();
+    let mut queue = vec![state];
+
+    while let Some(state) = queue.pop() {
+        all_states.entry(state.opened)
+            .and_modify(|pressure| *pressure = std::cmp::max(*pressure, state.pressure))
+            .or_insert(state.pressure);
+
+        for closed in valve_table.get_closed(state.opened) {
+            let distance = min_distances.get(&(state.valve, closed)).unwrap();
+            // if there is not enough time to reach a valve
+            if state.time < distance + 1 {
+                continue;
+            }
+            let new_time = state.time - distance - 1;
+            let new_pressure = valves.get(&closed).unwrap().0 * new_time + state.pressure;
+            let mut new_state = State::new(closed, new_time, new_pressure, state.opened);
+            new_state.open_valve(closed, valve_table);
+            queue.push(new_state);
+        }
+    }
+
+    all_states
+}
+
+fn get_best_combination(all_states: HashMap<u64, u32>, valve_table: &ValveTable) -> u32 {
+    let mut max = 0;
+    for (opened_human, pressure_human) in all_states.iter() {
+        for (opened_elephant, pressure_elephant) in all_states.iter() {
+            if valve_table.are_disjoint_valves(*opened_human, *opened_elephant) {
+                max = std::cmp::max(max, pressure_human + pressure_elephant);
             }
         }
     }
-    do_step_eleph(cur, e_cur, time_left, valves, score, max, states);
-}
-
-fn open_player(cur: &'static str, e_cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, &str, u64), u64>) {
-    // one opens, the other goes to neighbour
-    let new_score = score + valves.get(cur).unwrap().rate * time_left as u64;
-    for n in &valves.get(e_cur).unwrap().neighbours {
-        let best_time_left = states.entry((cur, n, new_score)).or_insert(0);
-        if *best_time_left < time_left {
-            *best_time_left = time_left;
-            let new_valves = open_valve(cur, valves.clone()); 
-            do_step_eleph(cur, n, time_left, &new_valves, new_score, max, states)
-        }
-    } 
-}
-
-fn open_eleph(cur: &'static str, e_cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, &str, u64), u64>) {
-    // one opens, the other goes to neighbour
-    let new_score = score + valves.get(e_cur).unwrap().rate * time_left as u64;
-    for n in &valves.get(cur).unwrap().neighbours {
-        let best_time_left = states.entry((n, e_cur, new_score)).or_insert(0);
-        if *best_time_left < time_left {
-            *best_time_left = time_left;
-            let new_valves = open_valve(e_cur, valves.clone()); 
-            do_step_eleph(n, e_cur, time_left, &new_valves, new_score, max, states)
-        }
-    } 
-}
-
-fn open_both(cur: &'static str, e_cur: &'static str, time_left: u64, valves: &Valves, score: u64, max: &mut u64, states: &mut HashMap<(&str, &str, u64), u64>) {
-    // one opens, the other goes to neighbour
-    let new_score = score + (valves.get(cur).unwrap().rate + valves.get(e_cur).unwrap().rate) * time_left;
-    let best_time_left = states.entry((cur, e_cur, new_score)).or_insert(0);
-    if *best_time_left < time_left {
-        *best_time_left = time_left;
-        let new_valves = open_valve(e_cur, open_valve(cur, valves.clone())); 
-        do_step_eleph(cur, e_cur, time_left, &new_valves, new_score, max, states)
-    }
-}
-
-fn max_pressure(valves: &Valves) -> u64 {
-    let mut max = 0;
-    do_step("AA", 30, valves, 0, &mut max, &mut HashMap::from([(("AA", 0), 30)]));
     max
-}
-
-fn max_pressure_eleph(valves: &Valves) -> u64 {
-    let mut max = 0;
-    do_step_eleph("AA", "AA", 26, valves, 0, &mut max, &mut HashMap::from([(("AA", "AA", 0), 26)]));
-    max
-}
-
-pub fn get_solution_1() -> u64 {
-    let valves = parse(INPUT);
-    max_pressure(&valves) 
-}
-
-pub fn get_solution_2() -> u64 {
-    // let valves = parse(INPUT);
-    // max_pressure_eleph(&valves) 
-    1933
-}
-
-#[test]
-fn test() {
-    get_solution_2();
 }
